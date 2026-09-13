@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/markdown-it-glossary.svg)](https://www.npmjs.com/package/markdown-it-glossary)
 [![CI](https://github.com/binarynoir/markdown-it-glossary/actions/workflows/ci.yml/badge.svg)](https://github.com/binarynoir/markdown-it-glossary/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/markdown-it-glossary.svg)](LICENSE)
+[![license](https://img.shields.io/npm/l/markdown-it-glossary.svg?cacheSeconds=3600)](LICENSE)
 
 Define a glossary once, in a plain Markdown file, and get it back as
 site-wide hover tooltips (`<abbr title="...">`) wherever those terms
