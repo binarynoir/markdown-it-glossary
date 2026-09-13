@@ -86,7 +86,7 @@
     "markdown-it": "^15.0.1",
     "prettier": "^3.9.6",
     "tsup": "^8.3.5",
-    "typescript": "^5.7.2",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.19.0",
     "vitepress": "2.0.0-alpha.20",
     "vitest": "^5.0.0"
