@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-glossary",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Define a glossary once in a plain Markdown file and get it back as site-wide hover tooltips (<abbr title=\"...\">) wherever those terms appear — with a Markdown-frontmatter opt-out per page. Built for VitePress, works with any markdown-it consumer.",
   "keywords": [
     "markdown-it",
@@ -67,7 +67,7 @@
     "release:major": "node scripts/release.js major"
   },
   "peerDependencies": {
-    "markdown-it": "^13.0.0 || ^14.0.0",
+    "markdown-it": "^15.0.0",
     "vitepress": "^1.0.0 || ^2.0.0-0"
   },
   "peerDependenciesMeta": {
@@ -79,7 +79,6 @@
     "markdown-it-abbr": "^2.0.0"
   },
   "devDependencies": {
-    "@types/markdown-it": "^14.1.2",
     "@types/node": "^26.5.1",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
