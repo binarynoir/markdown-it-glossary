@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-13
+
+### Changed
+
+- **Breaking:** raised the `markdown-it` peer dependency to `^15.0.0` (dropped `^13.0.0 || ^14.0.0`). markdown-it 15 restructured its package into a single bundled entry point with its own native types, dropping the old `lib/` subpath exports; earlier versions have no built-in types at all and can't satisfy the type imports this package now uses. Upgrade `markdown-it` to 15.x to use this version.
+
 ## [0.1.0] - 2026-09-13
 
 ### Added
