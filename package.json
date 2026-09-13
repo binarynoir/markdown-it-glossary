@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-glossary",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Define a glossary once in a plain Markdown file and get it back as site-wide hover tooltips (<abbr title=\"...\">) wherever those terms appear — with a Markdown-frontmatter opt-out per page. Built for VitePress, works with any markdown-it consumer.",
   "keywords": [
     "markdown-it",
