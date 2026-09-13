@@ -1,0 +1,20 @@
+{
+  "cSpell.words": [
+    "abbr",
+    "binarynoir",
+    "esbenp",
+    "frontmatter",
+    "markdownit",
+    "mdit",
+    "npmjs",
+    "premajor",
+    "preminor",
+    "prepatch",
+    "SSRS",
+    "tsup",
+    "vitepress",
+    "vuepress"
+  ],
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true
+}

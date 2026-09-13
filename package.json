@@ -1,0 +1,94 @@
+{
+  "name": "markdown-it-glossary",
+  "version": "0.1.0",
+  "description": "Define a glossary once in a plain Markdown file and get it back as site-wide hover tooltips (<abbr title=\"...\">) wherever those terms appear — with a Markdown-frontmatter opt-out per page. Built for VitePress, works with any markdown-it consumer.",
+  "keywords": [
+    "markdown-it",
+    "markdown-it-plugin",
+    "vitepress",
+    "vitepress-plugin",
+    "glossary",
+    "abbreviation",
+    "tooltip",
+    "docs",
+    "documentation"
+  ],
+  "license": "MIT",
+  "author": "BinaryNoir",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/binarynoir/markdown-it-glossary.git"
+  },
+  "homepage": "https://github.com/binarynoir/markdown-it-glossary#readme",
+  "bugs": {
+    "url": "https://github.com/binarynoir/markdown-it-glossary/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./vitepress": {
+      "types": "./dist/vitepress.d.ts",
+      "import": "./dist/vitepress.js",
+      "require": "./dist/vitepress.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build",
+    "release": "node scripts/release.js",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major"
+  },
+  "peerDependencies": {
+    "markdown-it": "^13.0.0 || ^14.0.0",
+    "vitepress": "^1.0.0 || ^2.0.0-0"
+  },
+  "peerDependenciesMeta": {
+    "vitepress": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "markdown-it-abbr": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^26.5.1",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "markdown-it": "^15.0.1",
+    "prettier": "^3.9.6",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.19.0",
+    "vitepress": "2.0.0-alpha.20",
+    "vitest": "^5.0.0"
+  }
+}
