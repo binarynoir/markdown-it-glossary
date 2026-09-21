@@ -26,7 +26,8 @@ Not to be confused with git's staging area, an unrelated meaning of the same wor
     expect(entries).toEqual([
       {
         term: "staging",
-        definition: "Not to be confused with git's staging area, an unrelated meaning of the same word.",
+        definition:
+          "Not to be confused with git's staging area, an unrelated meaning of the same word.",
         tooltip: false,
       },
     ]);
@@ -139,7 +140,8 @@ Not to be confused with git's staging area, an unrelated meaning of the same wor
     expect(entries).toEqual([
       {
         term: "staging",
-        definition: "Not to be confused with git's staging area, an unrelated meaning of the same word.",
+        definition:
+          "Not to be confused with git's staging area, an unrelated meaning of the same word.",
         tooltip: false,
         aliases: ["stage"],
       },

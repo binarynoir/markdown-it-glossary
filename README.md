@@ -156,6 +156,7 @@ and any blockers.
   something that only ever appears inside `` `backticks` `` is dead
   weight). It still shows up wherever you render the parsed entries —
   see [Building your own glossary page](#building-your-own-glossary-page).
+
 - **A comma-separated heading defines aliases** — other exact-text
   spellings that should tooltip with the same definition, without
   repeating it under a separate heading:
