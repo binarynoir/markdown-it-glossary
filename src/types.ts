@@ -10,6 +10,13 @@ export interface GlossaryEntry {
    * would never match in prose anyway) without it being auto-linked.
    */
   tooltip?: boolean;
+  /**
+   * Other exact-text spellings (an abbreviation, a full expansion, etc.)
+   * that should tooltip with this same definition, without duplicating
+   * it under a separate heading. Each alias is matched the same way
+   * `term` is — exact-text, case-sensitive, never inside inline code.
+   */
+  aliases?: string[];
 }
 
 export interface GlossaryAbbrOptions {

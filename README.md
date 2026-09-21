@@ -10,7 +10,7 @@ your docs.
 
 ## What this does
 
-Say your docs mention "SSRS" a hundred times across dozens of pages. Anyone
+Say your docs mention "CI" a hundred times across dozens of pages. Anyone
 who doesn't already know what that means has to go look it up, or just guess
 from context.
 
@@ -26,25 +26,26 @@ Here's the idea in practice:
 ```md
 <!-- glossary.md -->
 
-### SSRS
+### CI
 
-SQL Server Reporting Services — Microsoft's reporting platform.
+Continuous Integration — automatically building and testing every commit.
 ```
 
 ```md
 <!-- any other page -->
 
-We build most of our reports in SSRS.
+Every PR runs through CI before it can merge.
 ```
 
 renders as:
 
 ```html
-We build most of our reports in
-<abbr title="SQL Server Reporting Services — Microsoft's reporting platform.">SSRS</abbr>.
+Every PR runs through
+<abbr title="Continuous Integration — automatically building and testing every commit.">CI</abbr>
+before it can merge.
 ```
 
-That happens automatically, on every page, the moment `SSRS` (or any other
+That happens automatically, on every page, the moment `CI` (or any other
 defined term) shows up in prose.
 
 ## Install
@@ -123,12 +124,12 @@ by its definition as the next paragraph:
 ```md
 ### PBI
 
-Product Backlog Item — Azure DevOps' unit of work below a Feature/Epic.
+Product Backlog Item — Scrum's unit of work below a Feature/Epic.
 
-### linked server
+### standup
 
-A SQL Server feature that lets one database server query another as if
-it were local.
+A short daily sync where each person says what they did, what's next,
+and any blockers.
 ```
 
 - **The definition becomes the tooltip text verbatim.** Markdown
@@ -138,15 +139,16 @@ it were local.
 - **Matching is exact-text and case-sensitive**, and only matches plain
   prose — never text inside inline code spans (`` `like this` ``).
   Write the heading in whatever casing the term actually appears in
-  prose: lowercase for a common phrase (`linked server`), normal
-  capitalization for a proper noun or acronym (`SSRS`, `HIPAA`).
+  prose: lowercase for a common phrase (`standup`), normal
+  capitalization for a proper noun or acronym (`CI`, `API`).
 - **A heading with a parenthetical qualifier is parsed but never
   tooltipped:**
 
   ```md
-  ### staging (internal deploy environment)
+  ### staging (pre-production environment)
 
-  Not to be confused with a client's database of the same name.
+  Not to be confused with git's staging area — an unrelated meaning
+  of the same word.
   ```
 
   Use this for a term that's ambiguous elsewhere in your docs, or one
@@ -154,6 +156,22 @@ it were local.
   something that only ever appears inside `` `backticks` `` is dead
   weight). It still shows up wherever you render the parsed entries —
   see [Building your own glossary page](#building-your-own-glossary-page).
+- **A comma-separated heading defines aliases** — other exact-text
+  spellings that should tooltip with the same definition, without
+  repeating it under a separate heading:
+
+  ```md
+  ### PO, Product Owner
+
+  The person who owns the product backlog and represents the
+  customer's interests to the Scrum team.
+  ```
+
+  The first name is the canonical `term` (what shows on the glossary
+  page); the rest become `aliases`. Both `PO` and `Product Owner`
+  tooltip site-wide with the same definition. Combine with a
+  parenthetical qualifier if the whole group shouldn't auto-tooltip:
+  `### PO, Product Owner (internal nickname, not client-facing)`.
 
 ## Opting a page out
 
@@ -214,6 +232,8 @@ interface GlossaryEntry {
   definition: string;
   /** Defaults to `true`. `false` = parsed, but never auto-tooltipped. */
   tooltip?: boolean;
+  /** Other spellings that tooltip with this same definition. */
+  aliases?: string[];
 }
 ```
 

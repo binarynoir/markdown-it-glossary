@@ -61,6 +61,9 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
   for (const entry of resolvedEntries) {
     if (entry.tooltip === false) continue;
     abbreviations[":" + entry.term] = entry.definition;
+    for (const alias of entry.aliases ?? []) {
+      abbreviations[":" + alias] = entry.definition;
+    }
   }
 
   md.use(markdownItAbbr);

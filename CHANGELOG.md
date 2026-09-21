@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-21
+
+### Added
+
+- `GlossaryEntry.aliases` — other exact-text spellings (an abbreviation, a full expansion, etc.) that tooltip with the same definition as their term, without duplicating it under a separate heading. Written as a comma-separated glossary heading, e.g. `### PO, Product Owner`.
+
 ## [0.2.4] - 2026-09-21
 
 ### Changed

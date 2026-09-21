@@ -20,12 +20,19 @@ function stripMarkdown(text: string): string {
  * One- or two-sentence definition. May use **bold**, *italic*, `code`,
  * and [links](...) — all stripped for the plain-text tooltip.
  *
- * ### staging (AHC database)
+ * ### staging (pre-production environment)
  *
  * A heading with a parenthetical qualifier is still returned (for
  * display on a glossary page) but marked `tooltip: false` — the
  * parenthetical is a signal that the bare term is ambiguous or always
  * written as code elsewhere, so it isn't safe to auto-tooltip.
+ *
+ * ### PO, Product Owner
+ *
+ * A comma-separated heading defines one entry with aliases — the first
+ * name is the canonical `term` (used on the glossary page), the rest
+ * become `aliases` that tooltip with the same definition without
+ * repeating it under a separate heading.
  * ```
  *
  * Any Markdown structure around the headings (other heading levels,
@@ -45,9 +52,13 @@ export function parseGlossaryMarkdown(source: string, headingLevel = 3): Glossar
       continue;
     }
 
-    const rawTerm = heading[1].trim();
-    const qualified = /\s*\(.+\)\s*$/.test(rawTerm);
-    const term = rawTerm.replace(/\s*\(.+\)\s*$/, "").trim();
+    const rawHeading = heading[1].trim();
+    const qualified = /\s*\(.+\)\s*$/.test(rawHeading);
+    const unqualified = rawHeading.replace(/\s*\(.+\)\s*$/, "").trim();
+    const [term, ...aliases] = unqualified
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
     let j = i + 1;
     while (j < lines.length && lines[j].trim() === "") j++;
@@ -59,7 +70,12 @@ export function parseGlossaryMarkdown(source: string, headingLevel = 3): Glossar
     const definition = stripMarkdown(paraLines.join(" "));
 
     if (term && definition) {
-      entries.push({ term, definition, tooltip: !qualified });
+      entries.push({
+        term,
+        definition,
+        tooltip: !qualified,
+        ...(aliases.length > 0 ? { aliases } : {}),
+      });
     }
     i = j;
   }
