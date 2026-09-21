@@ -4,12 +4,24 @@
 [![CI](https://github.com/binarynoir/markdown-it-glossary/actions/workflows/ci.yml/badge.svg)](https://github.com/binarynoir/markdown-it-glossary/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/markdown-it-glossary.svg?cacheSeconds=3600)](LICENSE)
 
-Define a glossary once, in a plain Markdown file, and get it back as
-site-wide hover tooltips (`<abbr title="...">`) wherever those terms
-appear in your docs — no per-page setup, with a Markdown-frontmatter
-opt-out for the odd page that needs one. Built for [VitePress](https://vitepress.dev),
-works with any [markdown-it](https://github.com/markdown-it/markdown-it)
-consumer.
+A [markdown-it](https://github.com/markdown-it/markdown-it) plugin that
+turns a term you define once into a hover tooltip everywhere it appears in
+your docs.
+
+## What this does
+
+Say your docs mention "SSRS" a hundred times across dozens of pages. Anyone
+who doesn't already know what that means has to go look it up, or just guess
+from context.
+
+This plugin lets you write what a term means once, in a plain Markdown file,
+and it automatically wraps every plain-text mention of that term across your
+whole site in a hover tooltip showing the definition. No linking each mention
+by hand, no repeating the definition on every page it shows up on. Built for
+[VitePress](https://vitepress.dev), and works with any markdown-it-based
+setup too.
+
+Here's the idea in practice:
 
 ```md
 <!-- glossary.md -->
@@ -32,8 +44,8 @@ We build most of our reports in
 <abbr title="SQL Server Reporting Services — Microsoft's reporting platform.">SSRS</abbr>.
 ```
 
-— automatically, on every page, the moment `SSRS` (or any other defined
-term) shows up in prose.
+That happens automatically, on every page, the moment `SSRS` (or any other
+defined term) shows up in prose.
 
 ## Install
 
