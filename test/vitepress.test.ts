@@ -4,7 +4,7 @@ import { withGlossary } from "../src/vitepress.js";
 import type { GlossaryEntry } from "../src/types.js";
 import type { UserConfig } from "vitepress";
 
-const entries: GlossaryEntry[] = [{ term: "SSRS", definition: "SQL Server Reporting Services." }];
+const entries: GlossaryEntry[] = [{ term: "CI", definition: "Continuous Integration." }];
 
 // VitePress 2's `markdown.config` is typed against `markdown-it-async`'s
 // MarkdownIt, a structural superset of plain markdown-it's. A real
@@ -21,7 +21,7 @@ describe("withGlossary", () => {
 
     const md = new MarkdownIt();
     runMarkdownConfig(config, md);
-    expect(md.render("We use SSRS.")).toContain("<abbr");
+    expect(md.render("We use CI.")).toContain("<abbr");
   });
 
   it("does not replace an existing markdown.config — it still runs", () => {
@@ -37,7 +37,7 @@ describe("withGlossary", () => {
     expect(userConfigFn).toHaveBeenCalledTimes(1);
     expect(userConfigFn).toHaveBeenCalledWith(md);
     // And the glossary plugin still applied.
-    expect(md.render("We use SSRS.")).toContain("<abbr");
+    expect(md.render("We use CI.")).toContain("<abbr");
   });
 
   it("lets the user's own markdown.config run its own md.use() calls too", () => {

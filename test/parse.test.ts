@@ -4,14 +4,14 @@ import { parseGlossaryMarkdown } from "../src/parse.js";
 describe("parseGlossaryMarkdown", () => {
   it("parses a term and its definition paragraph", () => {
     const entries = parseGlossaryMarkdown(`
-### SSRS
+### CI
 
-SQL Server Reporting Services — Microsoft's reporting platform.
+Continuous Integration — automatically building and testing every commit.
 `);
     expect(entries).toEqual([
       {
-        term: "SSRS",
-        definition: "SQL Server Reporting Services — Microsoft's reporting platform.",
+        term: "CI",
+        definition: "Continuous Integration — automatically building and testing every commit.",
         tooltip: true,
       },
     ]);
@@ -19,14 +19,14 @@ SQL Server Reporting Services — Microsoft's reporting platform.
 
   it("marks a parenthetical-qualified heading as tooltip: false", () => {
     const entries = parseGlossaryMarkdown(`
-### staging (AHC database)
+### staging (pre-production environment)
 
-AHC's production database, confusingly named.
+Not to be confused with git's staging area, an unrelated meaning of the same word.
 `);
     expect(entries).toEqual([
       {
         term: "staging",
-        definition: "AHC's production database, confusingly named.",
+        definition: "Not to be confused with git's staging area, an unrelated meaning of the same word.",
         tooltip: false,
       },
     ]);
@@ -36,20 +36,20 @@ AHC's production database, confusingly named.
     const entries = parseGlossaryMarkdown(`
 ### PBI
 
-**Product Backlog Item** — see [Azure DevOps](https://example.com) and \`code\`.
+**Product Backlog Item** — see [the Scrum Guide](https://example.com) and \`code\`.
 `);
-    expect(entries[0].definition).toBe("Product Backlog Item — see Azure DevOps and code.");
+    expect(entries[0].definition).toBe("Product Backlog Item — see the Scrum Guide and code.");
   });
 
   it("joins a multi-line paragraph into one line", () => {
     const entries = parseGlossaryMarkdown(`
-### EMR
+### Sprint
 
-Electronic Medical Record — the category of system a client's
-clinical data lives in.
+A fixed-length iteration, typically one to four weeks, during which
+a Scrum team commits to a set amount of backlog work.
 `);
     expect(entries[0].definition).toBe(
-      "Electronic Medical Record — the category of system a client's clinical data lives in.",
+      "A fixed-length iteration, typically one to four weeks, during which a Scrum team commits to a set amount of backlog work.",
     );
   });
 
@@ -73,27 +73,27 @@ Should be ignored.
     const entries = parseGlossaryMarkdown(`
 ### Orphan
 
-### RDL
+### DoD
 
-Report Definition Language.
+Definition of Done.
 `);
     expect(entries).toHaveLength(1);
-    expect(entries[0].term).toBe("RDL");
+    expect(entries[0].term).toBe("DoD");
   });
 
   it("respects a custom heading level", () => {
     const entries = parseGlossaryMarkdown(
       `
-## SSRS
+## CI
 
-SQL Server Reporting Services.
+Continuous Integration.
 `,
       2,
     );
     expect(entries).toEqual([
       {
-        term: "SSRS",
-        definition: "SQL Server Reporting Services.",
+        term: "CI",
+        definition: "Continuous Integration.",
         tooltip: true,
       },
     ]);
@@ -101,5 +101,48 @@ SQL Server Reporting Services.
 
   it("returns an empty array for a file with no matching headings", () => {
     expect(parseGlossaryMarkdown("# Title\n\nJust prose, no terms.")).toEqual([]);
+  });
+
+  it("parses a comma-separated heading into a term with aliases", () => {
+    const entries = parseGlossaryMarkdown(`
+### PO, Product Owner
+
+The person who owns the product backlog and represents the customer's interests to the Scrum team.
+`);
+    expect(entries).toEqual([
+      {
+        term: "PO",
+        definition:
+          "The person who owns the product backlog and represents the customer's interests to the Scrum team.",
+        tooltip: true,
+        aliases: ["Product Owner"],
+      },
+    ]);
+  });
+
+  it("supports more than one alias", () => {
+    const entries = parseGlossaryMarkdown(`
+### PBI, Product Backlog Item, backlog item
+
+Scrum's unit of work below a Feature/Epic.
+`);
+    expect(entries[0].term).toBe("PBI");
+    expect(entries[0].aliases).toEqual(["Product Backlog Item", "backlog item"]);
+  });
+
+  it("applies a parenthetical qualifier to the whole comma-separated heading", () => {
+    const entries = parseGlossaryMarkdown(`
+### staging, stage (pre-production environment)
+
+Not to be confused with git's staging area, an unrelated meaning of the same word.
+`);
+    expect(entries).toEqual([
+      {
+        term: "staging",
+        definition: "Not to be confused with git's staging area, an unrelated meaning of the same word.",
+        tooltip: false,
+        aliases: ["stage"],
+      },
+    ]);
   });
 });
