@@ -58,16 +58,49 @@ npm install markdown-it-glossary
 
 ### VitePress
 
-Use `withGlossary` from the `/vitepress` subpath — no `markdown-it`
-knowledge required, same idea as `withMermaid` from
-[vitepress-plugin-mermaid](https://github.com/emersonbottero/vitepress-plugin-mermaid)
-if you've used that:
+Register the plugin in VitePress's own `markdown.config` hook, the same place
+you'd add any other markdown-it plugin:
 
 ```ts
 // .vitepress/config.mts
 import { defineConfig } from "vitepress";
-import { withGlossary } from "markdown-it-glossary/vitepress";
+import { glossaryAbbr } from "markdown-it-glossary";
 import path from "node:path";
+
+export default defineConfig({
+  markdown: {
+    config(md) {
+      md.use(glossaryAbbr, {
+        file: path.resolve(import.meta.dirname, "../glossary.md"),
+      });
+    },
+  },
+});
+```
+
+That's it — every page in the site now tooltips every term defined in
+`glossary.md`. Ship `glossary.md` as a normal page (add it to your nav)
+and it doubles as a browsable reference; nothing about this package
+requires it to be a "special" page type.
+
+Other markdown-it plugins go in the same `config(md)` function, so they
+share one place and you control the order:
+
+```ts
+config(md) {
+  md.use(glossaryAbbr, { file: path.resolve(import.meta.dirname, "../glossary.md") });
+  md.use(somethingElse);
+},
+```
+
+#### `withGlossary` shortcut
+
+If you'd rather wrap your config than touch `markdown.config`, use
+`withGlossary` from the `/vitepress` subpath, same idea as `withMermaid` from
+[vitepress-plugin-mermaid](https://github.com/emersonbottero/vitepress-plugin-mermaid):
+
+```ts
+import { withGlossary } from "markdown-it-glossary/vitepress";
 
 export default withGlossary(
   defineConfig({
@@ -77,29 +110,10 @@ export default withGlossary(
 );
 ```
 
-That's it — every page in the site now tooltips every term defined in
-`glossary.md`. Ship `glossary.md` as a normal page (add it to your nav)
-and it doubles as a browsable reference; nothing about this package
-requires it to be a "special" page type.
-
-**`withGlossary` will not clobber a `markdown.config` you already
-have** — including one set by another `withX()` wrapper composed the
-same way (`withMermaid`, etc.). It installs the glossary plugin, then
-calls whatever was already there with the same arguments, so both take
-effect regardless of the order you nest the wrappers in:
-
-```ts
-export default withGlossary(withMermaid(defineConfig({/* ... */})), {
-  file: path.resolve(import.meta.dirname, "../glossary.md"),
-});
-```
-
-If you'd rather call `md.use()` yourself — inside your own
-`markdown.config`, alongside other plugins, with full control over
-ordering — the lower-level `glossaryAbbr` plugin (used internally by
-`withGlossary`) is exported from the package root; see
-[Plain markdown-it](#plain-markdown-it) below. The two are equivalent;
-`withGlossary` just does the `markdown.config` wiring for you.
+It is equivalent to the `markdown.config` version above. It will not clobber a
+`markdown.config` you already have, including one set by another `withX()`
+wrapper (`withMermaid`, etc.): it installs the glossary plugin, then calls
+whatever was already there with the same arguments.
 
 ### Plain markdown-it
 
