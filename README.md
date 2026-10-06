@@ -308,3 +308,17 @@ Actions.
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## Support
+
+If you encounter any issues or have questions, please open an issue on [GitHub](https://github.com/binarynoir/markdown-it-glossary/issues).
+
+## Author
+
+John Smith III
+
+## Acknowledgments
+
+Thanks to all contributors and users for their support and feedback.
