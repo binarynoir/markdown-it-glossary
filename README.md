@@ -8,6 +8,10 @@ A [markdown-it](https://github.com/markdown-it/markdown-it) plugin that
 turns a term you define once into a hover tooltip everywhere it appears in
 your docs.
 
+[![Support me on Buy Me a Coffee](https://img.shields.io/badge/Support%20me-Buy%20Me%20a%20Coffee-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/binarynoir)
+[![Support me on Ko-fi](https://img.shields.io/badge/Support%20me-Ko--fi-blue?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/binarynoir)
+[![Visit my website](https://img.shields.io/badge/Website-binarynoir.tech-8c8c8c?style=for-the-badge)](https://binarynoir.tech)
+
 ## What this does
 
 Say your docs mention "CI" a hundred times across dozens of pages. Anyone
