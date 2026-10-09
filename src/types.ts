@@ -44,4 +44,35 @@ export interface GlossaryAbbrOptions {
    * opt-out mechanism entirely. Default: `"glossary"`.
    */
   frontmatterKey?: string | false;
+  /**
+   * Docs source directory. When set, every file named `scopedFile` below
+   * it becomes a section glossary covering its own folder and everything
+   * under it. The master `file` is never treated as a section glossary.
+   * Needs a host that sets `env.relativePath` (VitePress does).
+   */
+  root?: string;
+  /** File name that marks a section glossary under `root`. Default: `"glossary.md"`. */
+  scopedFile?: string;
+  /** Section glossaries declared explicitly, in addition to any found under `root`. */
+  scopes?: ScopedGlossary[];
+}
+
+/**
+ * A glossary that covers one folder of the docs and everything below it.
+ * Most sites don't need to list these by hand — set `root` and drop a
+ * `glossary.md` into any folder. Use `scopes` for non-conventional file
+ * names or for hosts that don't pass a page path.
+ */
+export interface ScopedGlossary {
+  /** Folder it covers, relative to the docs root (e.g. `"team-a"`). */
+  dir: string;
+  /** Path to a Markdown glossary file. Provide this OR `entries`. */
+  file?: string;
+  /** Pre-parsed entries. Provide this OR `file`. */
+  entries?: GlossaryEntry[];
+  /**
+   * Also apply to pages outside `dir`. Defaults to the file's
+   * `glossary-scope` frontmatter (`site`), else `false`.
+   */
+  site?: boolean;
 }

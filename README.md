@@ -147,10 +147,12 @@ export default {
 ```
 
 Options (all optional): `selector` (default `"abbr[title]"`), `hover`
-(default `true`; `false` for click and tap only), `touchOnly` (default
+(default `true`; `false` for click and tap only), `hoverDelay` (default
+`500`; milliseconds the mouse must rest on a term before the popover
+appears, like a native tooltip's delay, `0` for instant), `touchOnly` (default
 `false`; `true` responds to touch input only and leaves mouse users with
 the native tooltip), and `injectStyles` (default `true`; `false` lets you
-style `.glossary-popover` yourself). The default look follows VitePress
+style `.glossary-popover` yourself). Terms get a `help` (question mark) cursor for mouse users, which you can override in your own CSS. On touch screens they get a pointer cursor instead, which iOS Safari needs before it will deliver taps. The default look follows VitePress
 theme colors and can be overridden with `--glossary-popover-bg`,
 `--glossary-popover-fg`, and `--glossary-popover-border`. It returns a
 function that removes the listeners.
@@ -228,6 +230,178 @@ and any blockers.
   parenthetical qualifier if the whole group shouldn't auto-tooltip:
   `### PO, Product Owner (internal nickname, not client-facing)`.
 
+## Section glossaries
+
+A large site often has parts that own their own vocabulary: a team's
+docs, a product line, a versioned manual. A **section glossary** gives
+that part of the site its own terms without touching the rest.
+
+Some vocabulary used below:
+
+- **Master glossary** — the one you pass as `file` (or `entries`). It
+  applies to the whole site.
+- **Section glossary** — a `glossary.md` inside a subfolder. By default
+  it applies to pages in that folder and every folder below it, and
+  nowhere else. That area is its **scope**.
+- **Site-wide section glossary** — a section glossary that has chosen to
+  apply to every page on the site, not just its own folder.
+- **Page-local definition** — a `*[Term]: definition` line written in a
+  page itself.
+
+### Setup
+
+Tell the plugin where your docs live with `root`, then drop a
+`glossary.md` into any folder:
+
+```ts
+md.use(glossaryAbbr, {
+  file: path.resolve(import.meta.dirname, "../glossary.md"), // master
+  root: path.resolve(import.meta.dirname, ".."), // docs source dir
+});
+```
+
+```text
+docs/
+├─ glossary.md             master: applies everywhere
+├─ team-a/
+│  ├─ glossary.md          section glossary: team-a/ and below
+│  ├─ guides/
+│  │  ├─ glossary.md       section glossary: team-a/guides/ and below
+│  │  └─ deploy.md
+│  └─ index.md
+└─ team-b/
+   └─ index.md
+```
+
+Section glossaries use the same format as the master. The plugin finds
+them when the config loads (it skips `node_modules`, `dist`, and folders
+starting with a dot, like `.vitepress`), so adding or editing one needs a
+dev-server restart, just like the master. The master file is never
+mistaken for a section glossary.
+
+This needs a host that tells the plugin each page's path
+(`env.relativePath`): VitePress does. See
+[Without a page path](#without-a-page-path) for other setups.
+
+### Applying a section glossary to the whole site
+
+By default a section glossary stays in its own folder. To make it a
+site-wide section glossary, set `glossary-scope` in its frontmatter:
+
+```md
+---
+glossary-scope: site
+---
+
+### SLO
+
+Service Level Objective — ...
+```
+
+Accepted values are `section` (the default) and `site`.
+
+### Which definition wins
+
+When the same term is defined in more than one glossary, the plugin uses
+one rule: **the closest glossary wins**. "Closest" means closest to the
+page being rendered, measured in folders. A glossary in the page's own
+folder beats one a level up, which beats one above that, and so on, with
+the master glossary last because it is the farthest from everything.
+
+For each page the plugin ranks the glossaries that apply, highest
+precedence first, and for each term the highest-ranked glossary that
+defines it is used:
+
+| Rank | Source                         | Applies to the page when…                                                      |
+| ---- | ------------------------------ | ------------------------------------------------------------------------------ |
+| 1    | **Page-local definition**      | the page has its own `*[Term]: …` line                                         |
+| 2    | **Section glossary, closest**  | its folder contains the page; the deepest folder ranks highest                 |
+| 3    | **Section glossary, farther**  | its folder contains the page, but a deeper section glossary also does          |
+| 4    | **Site-wide section glossary** | it is marked `glossary-scope: site` and its folder does _not_ contain the page |
+| 5    | **Master glossary**            | always, unless the page opts out                                               |
+
+(Ranks 2 and 3 are one rule: the deeper the folder, the higher the rank.
+They are split here only to show the order.)
+
+Example, using the layout above, where `CI` is defined in the master,
+in `team-a/glossary.md`, and in `team-a/guides/glossary.md`:
+
+| Page                      | `CI` comes from             | Why                                  |
+| ------------------------- | --------------------------- | ------------------------------------ |
+| `team-a/guides/deploy.md` | `team-a/guides/glossary.md` | its own folder is the closest        |
+| `team-a/index.md`         | `team-a/glossary.md`        | the closest glossary that covers it  |
+| `team-b/index.md`         | the master glossary         | no section glossary covers `team-b/` |
+
+Details worth knowing:
+
+- **Only the conflicting term is replaced.** A closer glossary overrides
+  the terms it defines. Every other term from farther glossaries still
+  applies, so a section glossary adds to the master rather than replacing
+  it.
+- **Aliases count as terms.** `PO` and `Product Owner` each follow the
+  rule on their own.
+- **A "not tooltipped" entry counts as a definition.** If a closer
+  glossary defines a term with a parenthetical qualifier
+  (`### staging (git area)`), that term shows no tooltip on those pages,
+  even if a farther glossary defines it. This is how a section says "this
+  word means something else here."
+- **Site-wide glossaries rank below the page's own sections.** On pages
+  inside `team-a/`, `team-a`'s glossary beats a site-wide glossary from
+  `team-b/`.
+- **Two site-wide glossaries defining the same term** have no closer one
+  to choose. The one whose folder name comes first alphabetically wins,
+  and the plugin logs a warning at startup so you can resolve it.
+
+### Opting out
+
+The `glossary` frontmatter key controls which layers a page gets:
+
+```md
+---
+glossary: false # nothing: no master, no section glossaries
+---
+```
+
+```md
+---
+glossary:
+  master: false # skip the master glossary, keep section glossaries
+---
+```
+
+```md
+---
+glossary:
+  local: false # skip all section glossaries, keep the master
+---
+```
+
+`local: false` skips every section glossary, including site-wide ones
+from other folders. The two keys can be combined, though that is the
+same as `glossary: false`. Page-local `*[Term]: …` definitions work in
+every case.
+
+### Without a page path
+
+A bare markdown-it setup does not tell the plugin which page is being
+rendered, so folder scoping cannot work and only the master and
+site-wide section glossaries apply. To use section glossaries with a
+host that does provide `env.relativePath`, but with unconventional file
+names, or to declare them explicitly, use `scopes`:
+
+```ts
+md.use(glossaryAbbr, {
+  file: "glossary.md",
+  scopes: [
+    { dir: "team-a", file: "docs/team-a/terms.md" },
+    { dir: "shared", entries: [{ term: "SLO", definition: "..." }], site: true },
+  ],
+});
+```
+
+`dir` is relative to the docs root, the same coordinate as
+`env.relativePath`.
+
 ## Opting a page out
 
 Add the configured frontmatter key (`glossary` by default) set to
@@ -242,7 +416,11 @@ glossary: false
 Useful for the glossary page itself, so its own term headings don't
 tooltip themselves.
 
-Opting out only turns off the **site-wide** glossary for that page. The
+`glossary: false` turns off every glossary for that page. To drop only the
+master, or only the section glossaries, see
+[Section glossaries](#opting-out).
+
+Opting out only turns off the **glossaries** for that page. The
 page still has full [markdown-it-abbr](https://github.com/markdown-it/markdown-it-abbr)
 support, so you can add tooltips by hand there. Write a definition line
 anywhere in the page's Markdown, in the form `*[Term]: definition`:
@@ -290,6 +468,11 @@ The same options object works for both `glossaryAbbr(md, options)` and
 
   headingLevel: 3,             // heading level that marks a term (### = 3)
   frontmatterKey: "glossary",  // frontmatter key for the opt-out; `false` disables it entirely
+
+  // Section glossaries (all optional) — see "Section glossaries".
+  root: string,                // docs source dir; enables folder discovery
+  scopedFile: "glossary.md",   // file name that marks a section glossary
+  scopes: ScopedGlossary[],    // explicit section glossaries
 }
 ```
 
@@ -314,6 +497,13 @@ interface GlossaryEntry {
   tooltip?: boolean;
   /** Other spellings that tooltip with this same definition. */
   aliases?: string[];
+}
+
+interface ScopedGlossary {
+  dir: string; // folder it covers, relative to the docs root
+  file?: string; // glossary Markdown file (or `entries`)
+  entries?: GlossaryEntry[];
+  site?: boolean; // apply site-wide; defaults to the file's `glossary-scope`
 }
 ```
 

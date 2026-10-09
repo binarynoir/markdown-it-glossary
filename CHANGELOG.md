@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-09
+
+### Added
+
+- Section glossaries: with the new `root` option, a `glossary.md` in any subfolder applies to that folder and everything below it. The closest glossary to the page wins when a term is defined more than once
+- `glossary-scope: site` in a section glossary's frontmatter applies it to the whole site instead of its own folder
+- Per-layer opt-outs: `glossary: { master: false }` and `glossary: { local: false }` (`glossary: false` still turns everything off)
+- `scopedFile` and `scopes` options for custom file names and explicit declarations; `parseGlossaryFrontmatter` export
+- A term marked "not tooltipped" in a closer glossary now hides the same term from farther glossaries
+- `hoverDelay` option for `enableGlossaryTooltips()` (default `500` ms): the popover now waits for the mouse to rest on a term, like a native tooltip, instead of opening instantly. A click still opens it immediately; `0` restores the old behavior
+
+### Fixed
+
+- Terms show the `help` (question mark) cursor for mouse users again. The forced `cursor: pointer` that makes taps work on iOS Safari is now limited to touch screens, and the `help` cursor stays on a term while its popover is open
+- Headings inside fenced code blocks are no longer parsed as glossary terms, so a page can show example glossary syntax
+
 ## [0.3.7] - 2026-10-09
 
 ### Changed
