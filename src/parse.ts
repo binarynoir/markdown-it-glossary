@@ -35,6 +35,9 @@ function stripMarkdown(text: string): string {
  * repeating it under a separate heading.
  * ```
  *
+ * Headings inside fenced code blocks are ignored, so a page can show
+ * example glossary syntax without it being parsed as terms.
+ *
  * Any Markdown structure around the headings (other heading levels,
  * intros, `:::` containers, etc.) is ignored — only headings at
  * `headingLevel` and the paragraph immediately following each are read.
@@ -44,9 +47,23 @@ export function parseGlossaryMarkdown(source: string, headingLevel = 3): Glossar
   const lines = source.split("\n");
   const entries: GlossaryEntry[] = [];
 
+  // Headings inside fenced code blocks are examples, not terms.
+  const inFence: boolean[] = [];
+  let fence: string | null = null;
+  for (const line of lines) {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})/)?.[1];
+    if (fence === null) {
+      inFence.push(false);
+      if (marker) fence = marker;
+    } else {
+      inFence.push(true);
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length) fence = null;
+    }
+  }
+
   let i = 0;
   while (i < lines.length) {
-    const heading = lines[i].match(headingRe);
+    const heading = inFence[i] ? null : lines[i].match(headingRe);
     if (!heading) {
       i++;
       continue;
@@ -63,7 +80,13 @@ export function parseGlossaryMarkdown(source: string, headingLevel = 3): Glossar
     let j = i + 1;
     while (j < lines.length && lines[j].trim() === "") j++;
     const paraLines: string[] = [];
-    while (j < lines.length && lines[j].trim() !== "" && !/^#{1,6} /.test(lines[j])) {
+    while (
+      j < lines.length &&
+      lines[j].trim() !== "" &&
+      !/^#{1,6} /.test(lines[j]) &&
+      !inFence[j] &&
+      !/^ {0,3}(`{3,}|~{3,})/.test(lines[j])
+    ) {
       paraLines.push(lines[j]);
       j++;
     }
@@ -86,4 +109,21 @@ export function parseGlossaryMarkdown(source: string, headingLevel = 3): Glossar
 /** Reads `filePath` and parses it with {@link parseGlossaryMarkdown}. */
 export function loadGlossaryFile(filePath: string, headingLevel = 3): GlossaryEntry[] {
   return parseGlossaryMarkdown(readFileSync(filePath, "utf8"), headingLevel);
+}
+
+/**
+ * Reads the leading `---` frontmatter block of a glossary file as flat
+ * `key: value` pairs (quotes stripped). Only simple scalar values are
+ * understood — enough for settings like `glossary-scope: site`. Returns
+ * `{}` when the file has no frontmatter.
+ */
+export function parseGlossaryFrontmatter(source: string): Record<string, string> {
+  const block = source.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!block) return {};
+  const result: Record<string, string> = {};
+  for (const line of block[1].split(/\r?\n/)) {
+    const pair = line.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*?)\s*$/);
+    if (pair) result[pair[1]] = pair[2].replace(/^(["'])(.*)\1$/, "$2");
+  }
+  return result;
 }

@@ -10,6 +10,13 @@ export interface GlossaryTooltipOptions {
    */
   hover?: boolean;
   /**
+   * Milliseconds the mouse must rest on a term before its popover appears,
+   * like the delay on a browser's native tooltip. Moving off the term
+   * first cancels it, and a click opens it immediately. Set to `0` to
+   * show it instantly. Default: `500`.
+   */
+  hoverDelay?: number;
+  /**
    * Only respond to touch input (touch screens), leaving mouse users with
    * the browser's native `title` tooltip. Default: `false`.
    */
@@ -22,6 +29,8 @@ export interface GlossaryTooltipOptions {
 }
 
 const STYLE_ID = "glossary-popover-style";
+// Marks a term whose `title` is lifted, so selectors keep matching it.
+const LIFTED = "[data-glossary-lifted]";
 
 // Colors fall back to VitePress theme variables, then to neutral values,
 // and can be overridden with --glossary-popover-bg / -fg / -border.
@@ -77,6 +86,7 @@ export function enableGlossaryTooltips(options: GlossaryTooltipOptions = {}): ()
   const {
     selector = "abbr[title]",
     hover = true,
+    hoverDelay = 500,
     touchOnly = false,
     injectStyles = true,
   } = options;
@@ -98,10 +108,16 @@ export function enableGlossaryTooltips(options: GlossaryTooltipOptions = {}): ()
     style = document.createElement("style");
     style.id = STYLE_ID;
     // iOS Safari only dispatches `click` for elements it considers
-    // clickable, which a bare <abbr> isn't — `cursor: pointer` opts it in, so
-    // this is injected even with `injectStyles: false`. Forced because themes
-    // often set `cursor: help` here.
-    style.textContent = `${selector} {\n  cursor: pointer !important;\n  -webkit-tap-highlight-color: transparent;\n}\n${injectStyles ? CSS : ""}`;
+    // clickable, which a bare <abbr> isn't, and `cursor: pointer` opts it
+    // in. That is only needed on touch screens, so it is scoped to them and
+    // injected even with `injectStyles: false`; it is forced because themes
+    // often set another cursor here. Mouse users get the `help` cursor
+    // (overridable). While a popover is open the term's `title` is lifted,
+    // so `LIFTED` keeps it matching.
+    const targets = `${selector}, ${LIFTED}`;
+    style.textContent =
+      `@media (hover: none), (pointer: coarse) {\n  ${targets} {\n    cursor: pointer !important;\n    -webkit-tap-highlight-color: transparent;\n  }\n}\n` +
+      (injectStyles ? `${targets} {\n  cursor: help;\n}\n${CSS}` : "");
     document.head.appendChild(style);
   };
 
@@ -110,15 +126,29 @@ export function enableGlossaryTooltips(options: GlossaryTooltipOptions = {}): ()
   let popover: HTMLElement | null = null;
   let anchor: Element | null = null;
   let pinned = false;
+  // A term the mouse is resting on, waiting out `hoverDelay`.
+  let pending: Element | null = null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   // Definitions of terms whose `title` is lifted while their popover is open.
   const lifted = new Map<Element, string>();
 
   const restoreTitle = (): void => {
-    for (const [el, text] of lifted) el.setAttribute("title", text);
+    for (const [el, text] of lifted) {
+      el.setAttribute("title", text);
+      el.removeAttribute("data-glossary-lifted");
+    }
     lifted.clear();
   };
 
+  const lift = (el: Element, text: string): void => {
+    el.removeAttribute("title");
+    el.setAttribute("data-glossary-lifted", "");
+    lifted.set(el, text);
+  };
+
   const close = (): void => {
+    clearTimeout(timer);
+    pending = null;
     popover?.remove();
     popover = null;
     anchor = null;
@@ -129,8 +159,7 @@ export function enableGlossaryTooltips(options: GlossaryTooltipOptions = {}): ()
   const open = (target: Element, text: string): void => {
     close();
     anchor = target;
-    target.removeAttribute("title");
-    lifted.set(target, text);
+    lift(target, text);
 
     const el = document.createElement("div");
     el.className = "glossary-popover";
@@ -161,7 +190,8 @@ export function enableGlossaryTooltips(options: GlossaryTooltipOptions = {}): ()
   // matches `selector`, so the open anchor is matched by containment.
   const termFor = (event: Event): Element | null => {
     const node = event.target as Element | null;
-    if (anchor && node && anchor.contains(node)) return anchor;
+    const current = anchor ?? pending;
+    if (current && node && current.contains(node)) return current;
     return node?.closest?.(selector) ?? null;
   };
 
@@ -198,13 +228,25 @@ export function enableGlossaryTooltips(options: GlossaryTooltipOptions = {}): ()
     const term = termFor(event);
     if (!term || term === anchor) return;
     const text = textFor(term);
-    if (text) open(term, text);
+    if (!text) return;
+    if (hoverDelay <= 0) {
+      open(term, text);
+      return;
+    }
+    if (term === pending) return;
+    // Lift the title right away so the browser's own tooltip can't appear
+    // during the wait; `close()` puts it back if the mouse leaves first.
+    close();
+    pending = term;
+    lift(term, text);
+    timer = setTimeout(() => open(term, text), hoverDelay);
   };
 
   const onPointerOut = (event: Event): void => {
-    if ((event as PointerEvent).pointerType !== "mouse" || pinned || !anchor) return;
+    const current = anchor ?? pending;
+    if ((event as PointerEvent).pointerType !== "mouse" || pinned || !current) return;
     const next = (event as PointerEvent).relatedTarget as Node | null;
-    if (next && anchor.contains(next)) return;
+    if (next && current.contains(next)) return;
     close();
   };
 

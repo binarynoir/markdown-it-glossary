@@ -148,3 +148,35 @@ Not to be confused with git's staging area, an unrelated meaning of the same wor
     ]);
   });
 });
+
+describe("fenced code blocks", () => {
+  it("ignores headings inside ``` and ~~~ fences", () => {
+    const src = [
+      "### Real",
+      "",
+      "A real term.",
+      "",
+      "```md",
+      "### Example",
+      "",
+      "Shown as an example.",
+      "```",
+      "",
+      "~~~",
+      "### Tilde",
+      "",
+      "Also an example.",
+      "~~~",
+      "",
+      "### After",
+      "",
+      "Parsed again after the fences.",
+    ].join("\n");
+    expect(parseGlossaryMarkdown(src).map((e) => e.term)).toEqual(["Real", "After"]);
+  });
+
+  it("stops a definition at a fence that follows without a blank line", () => {
+    const src = "### Term\n\nDefinition here.\n```\ncode\n```\n";
+    expect(parseGlossaryMarkdown(src)[0].definition).toBe("Definition here.");
+  });
+});
