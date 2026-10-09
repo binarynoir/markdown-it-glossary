@@ -39,6 +39,11 @@
       "import": "./dist/vitepress.js",
       "require": "./dist/vitepress.cjs"
     },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js",
+      "require": "./dist/client.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [

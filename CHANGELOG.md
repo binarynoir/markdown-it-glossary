@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-10-09
+
+### Added
+
+- `markdown-it-glossary/client` with `enableGlossaryTouch()`: tap a term to show its definition in a popover on touch devices, where `<abbr title>` never shows because there is no hover
+
 ## [0.3.4] - 2026-10-08
 
 ### Changed
