@@ -121,6 +121,37 @@ It is equivalent to the `markdown.config` version above. It will not clobber a
 wrapper (`withMermaid`, etc.): it installs the glossary plugin, then calls
 whatever was already there with the same arguments.
 
+#### Touch devices
+
+`<abbr title>` tooltips only appear on hover, so they never show on a
+phone or tablet. Call `enableGlossaryTouch()` once in the browser and
+tapping a term shows its definition in a small popover instead; tapping
+elsewhere, scrolling, or pressing Escape dismisses it. It only activates
+on devices that can't hover, so desktop keeps the native tooltip.
+
+In VitePress, set it up in the theme, not the config. Call it from your theme's `enhanceApp`:
+
+```ts
+// .vitepress/theme/index.ts
+import DefaultTheme from "vitepress/theme";
+import { enableGlossaryTouch } from "markdown-it-glossary/client";
+
+export default {
+  extends: DefaultTheme,
+  enhanceApp() {
+    enableGlossaryTouch();
+  },
+};
+```
+
+Options (all optional): `selector` (default `"abbr[title]"`), `touchOnly`
+(default `true`; `false` also enables the popover on desktop), and
+`injectStyles` (default `true`; `false` lets you style `.glossary-popover`
+yourself). The default look follows VitePress theme colors and can be
+overridden with `--glossary-popover-bg`, `--glossary-popover-fg`, and
+`--glossary-popover-border`. It returns a function that removes the
+listeners.
+
 ### Plain markdown-it
 
 ```ts
@@ -304,37 +335,6 @@ abbr[title] {
   cursor: help;
 }
 ```
-
-## Touch devices
-
-`<abbr title>` tooltips only appear on hover, so they never show on a
-phone or tablet. Call `enableGlossaryTouch()` once in the browser and
-tapping a term shows its definition in a small popover instead; tapping
-elsewhere, scrolling, or pressing Escape dismisses it. It only activates
-on devices that can't hover, so desktop keeps the native tooltip.
-
-In VitePress, call it from your theme's `enhanceApp`:
-
-```ts
-// .vitepress/theme/index.ts
-import DefaultTheme from "vitepress/theme";
-import { enableGlossaryTouch } from "markdown-it-glossary/client";
-
-export default {
-  extends: DefaultTheme,
-  enhanceApp() {
-    enableGlossaryTouch();
-  },
-};
-```
-
-Options (all optional): `selector` (default `"abbr[title]"`), `touchOnly`
-(default `true`; `false` also enables the popover on desktop), and
-`injectStyles` (default `true`; `false` lets you style `.glossary-popover`
-yourself). The default look follows VitePress theme colors and can be
-overridden with `--glossary-popover-bg`, `--glossary-popover-fg`, and
-`--glossary-popover-border`. It returns a function that removes the
-listeners.
 
 ## Releasing
 
