@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-10-09
+
+### Changed
+
+- Renamed `enableGlossaryTouch()` to `enableGlossaryTooltips()` since it is no longer touch-only; the options type is now `GlossaryTooltipOptions`
+- `enableGlossaryTooltips()` now shows the popover for every input: mouse hover (click to pin), click, and tap. The native `title` tooltip is lifted while the popover is open so the two don't overlap. `touchOnly` now defaults to `false`; new `hover` option (default `true`)
+- Touch detection runs per event instead of once at load, so it also works when device emulation is toggled after the page loads or on hybrid devices
+
+### Fixed
+
+- `enableGlossaryTooltips()` now works on iOS Safari, which doesn't dispatch `click` on non-clickable elements like a bare `<abbr>`; terms get `cursor: pointer`
+- Detect touch devices with `(hover: none), (pointer: coarse)` so iPads in "desktop site" mode are covered
+
 ## [0.3.6] - 2026-10-09
 
 ### Changed

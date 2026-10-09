@@ -121,36 +121,39 @@ It is equivalent to the `markdown.config` version above. It will not clobber a
 wrapper (`withMermaid`, etc.): it installs the glossary plugin, then calls
 whatever was already there with the same arguments.
 
-#### Touch devices
+#### Hover, click and tap
 
-`<abbr title>` tooltips only appear on hover, so they never show on a
-phone or tablet. Call `enableGlossaryTouch()` once in the browser and
-tapping a term shows its definition in a small popover instead; tapping
-elsewhere, scrolling, or pressing Escape dismisses it. It only activates
-on devices that can't hover, so desktop keeps the native tooltip.
+`<abbr title>` tooltips need a mouse hover, so they never show on a phone
+or tablet. Call `enableGlossaryTooltips()` once in the browser and every
+term gets a small popover that works with any input: hover a term with a
+mouse (click to pin it open), or tap it on a touch screen. Tap the term
+again, tap elsewhere, scroll, or press Escape to dismiss it. While the
+popover is open the term's `title` is lifted so the browser's own tooltip
+doesn't show on top of it, then restored.
 
 In VitePress, set it up in the theme, not the config. Call it from your theme's `enhanceApp`:
 
 ```ts
 // .vitepress/theme/index.ts
 import DefaultTheme from "vitepress/theme";
-import { enableGlossaryTouch } from "markdown-it-glossary/client";
+import { enableGlossaryTooltips } from "markdown-it-glossary/client";
 
 export default {
   extends: DefaultTheme,
   enhanceApp() {
-    enableGlossaryTouch();
+    enableGlossaryTooltips();
   },
 };
 ```
 
-Options (all optional): `selector` (default `"abbr[title]"`), `touchOnly`
-(default `true`; `false` also enables the popover on desktop), and
-`injectStyles` (default `true`; `false` lets you style `.glossary-popover`
-yourself). The default look follows VitePress theme colors and can be
-overridden with `--glossary-popover-bg`, `--glossary-popover-fg`, and
-`--glossary-popover-border`. It returns a function that removes the
-listeners.
+Options (all optional): `selector` (default `"abbr[title]"`), `hover`
+(default `true`; `false` for click and tap only), `touchOnly` (default
+`false`; `true` responds to touch input only and leaves mouse users with
+the native tooltip), and `injectStyles` (default `true`; `false` lets you
+style `.glossary-popover` yourself). The default look follows VitePress
+theme colors and can be overridden with `--glossary-popover-bg`,
+`--glossary-popover-fg`, and `--glossary-popover-border`. It returns a
+function that removes the listeners.
 
 ### Plain markdown-it
 
