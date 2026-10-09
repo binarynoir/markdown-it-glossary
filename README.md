@@ -208,6 +208,31 @@ glossary: false
 Useful for the glossary page itself, so its own term headings don't
 tooltip themselves.
 
+Opting out only turns off the **site-wide** glossary for that page. The
+page still has full [markdown-it-abbr](https://github.com/markdown-it/markdown-it-abbr)
+support, so you can add tooltips by hand there. Write a definition line
+anywhere in the page's Markdown, in the form `*[Term]: definition`:
+
+```md
+---
+glossary: false
+---
+
+# Release notes
+
+We cut a release every sprint, and each one is gated on CI passing.
+
+*[CI]: Continuous Integration — only this page's definition applies.
+```
+
+Every exact, case-sensitive occurrence of `CI` on that page becomes an
+`<abbr title="...">`, and nothing else from the glossary does. The
+definition line itself isn't rendered. This is how you keep a few terms
+on a page that is otherwise opted out, or define terms that aren't in the
+glossary at all. The same syntax is what
+[Overriding a term on one page](#overriding-a-term-on-one-page) uses on a
+page that has _not_ opted out.
+
 ## Overriding a term on one page
 
 Write a real [markdown-it-abbr](https://github.com/markdown-it/markdown-it-abbr)
