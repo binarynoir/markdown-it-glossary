@@ -9,15 +9,27 @@ import type { GlossaryEntry, ScopedGlossary } from "./types.js";
  * relative to the docs root in POSIX form (`""` = the root itself).
  * `terms` maps markdown-it-abbr keys (`":" + text`) to a definition, or
  * to `null` for a term that is deliberately not tooltipped here (see
- * {@link resolveTerms}). `caseSensitive` is the layer's own setting, or
+ * {@link resolveTerms}), plus the term's own case flag. `caseSensitive` is the layer's own setting, or
  * `undefined` to inherit one (see {@link resolveCaseSensitive}).
  */
 export interface GlossaryLayer {
   dir: string;
   site: boolean;
   source: string;
-  terms: Map<string, string | null>;
+  terms: Map<string, GlossaryTerm>;
   caseSensitive?: boolean;
+}
+
+export interface GlossaryTerm {
+  definition: string | null;
+  /** The entry's `{.exact}` / `{.anycase}` flag; unset follows the page. */
+  caseSensitive?: boolean;
+}
+
+/** A page's merged terms, plus which of them match in any case. */
+export interface ResolvedTerms {
+  definitions: Record<string, string>;
+  anyCase: Set<string>;
 }
 
 /** Frontmatter key that sets case sensitivity, in glossary files and pages alike. */
@@ -41,10 +53,13 @@ export function parseCaseSensitive(value: unknown, label: string): boolean | und
 
 const SKIP_DIRS = new Set(["node_modules", "dist", "cache"]);
 
-export function buildTerms(entries: GlossaryEntry[]): Map<string, string | null> {
-  const terms = new Map<string, string | null>();
+export function buildTerms(entries: GlossaryEntry[]): Map<string, GlossaryTerm> {
+  const terms = new Map<string, GlossaryTerm>();
   for (const entry of entries) {
-    const value = entry.tooltip === false ? null : entry.definition;
+    const value: GlossaryTerm = {
+      definition: entry.tooltip === false ? null : entry.definition,
+      caseSensitive: entry.caseSensitive,
+    };
     for (const text of [entry.term, ...(entry.aliases ?? [])]) {
       terms.set(":" + text, value);
     }
@@ -217,32 +232,37 @@ export function resolveCaseSensitive(
  * from every lower-precedence layer, so a section can say "this word is
  * ambiguous here" and not inherit the master's tooltip for it.
  *
- * When `caseSensitive` is `false`, spellings that differ only in case
- * are the same term, so `api` in a closer glossary decides `API` too.
+ * Each term matches in exact case or in any case: its own flag if it
+ * has one, else `caseSensitive` (the page's setting). A term matched in
+ * any case claims every casing of itself, so `api` in a closer glossary
+ * decides `API` too; an exact term claims only its own spelling.
  */
-export function resolveTerms(
-  layers: GlossaryLayer[],
-  caseSensitive = true,
-): Record<string, string> {
-  const decided = new Set<string>();
-  const merged: Record<string, string> = {};
+export function resolveTerms(layers: GlossaryLayer[], caseSensitive = true): ResolvedTerms {
+  const spellings = new Set<string>();
+  const foldedSpellings = new Set<string>();
+  const definitions: Record<string, string> = {};
+  const anyCase = new Set<string>();
   for (const layer of layers) {
-    for (const [key, definition] of layer.terms) {
-      const id = caseSensitive ? key : foldCase(key);
-      if (decided.has(id)) continue;
-      decided.add(id);
-      if (definition !== null) merged[key] = definition;
+    for (const [key, term] of layer.terms) {
+      const folded = foldCase(key);
+      if (spellings.has(key) || foldedSpellings.has(folded)) continue;
+      const exact = term.caseSensitive ?? caseSensitive;
+      spellings.add(key);
+      if (!exact) foldedSpellings.add(folded);
+      if (term.definition === null) continue;
+      definitions[key] = term.definition;
+      if (!exact) anyCase.add(key);
     }
   }
-  return merged;
+  return { definitions, anyCase };
 }
 
 /** Warns about terms defined by two or more site-wide glossaries. */
 export function warnSiteConflicts(layers: GlossaryLayer[]): void {
   const owners = new Map<string, string[]>();
   for (const layer of layers.filter((l) => l.site)) {
-    for (const [key, definition] of layer.terms) {
-      if (definition === null) continue;
+    for (const [key, term] of layer.terms) {
+      if (term.definition === null) continue;
       owners.set(key, [...(owners.get(key) ?? []), layer.source]);
     }
   }

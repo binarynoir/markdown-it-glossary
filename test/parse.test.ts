@@ -180,3 +180,27 @@ describe("fenced code blocks", () => {
     expect(parseGlossaryMarkdown(src)[0].definition).toBe("Definition here.");
   });
 });
+
+describe("heading attribute blocks", () => {
+  const parse = (heading: string) => parseGlossaryMarkdown(`### ${heading}\n\nA definition.\n`)[0];
+
+  it("reads {.exact} and {.anycase}", () => {
+    expect(parse("IT {.exact}")).toMatchObject({ term: "IT", caseSensitive: true });
+    expect(parse("standup {.anycase}")).toMatchObject({ term: "standup", caseSensitive: false });
+  });
+
+  it("strips other attributes, like a custom anchor", () => {
+    const entry = parse("CI {#ci}");
+    expect(entry.term).toBe("CI");
+    expect(entry).not.toHaveProperty("caseSensitive");
+  });
+
+  it("combines with anchors, aliases and qualifiers", () => {
+    expect(parse("PO, Product Owner {#po .exact}")).toMatchObject({
+      term: "PO",
+      aliases: ["Product Owner"],
+      caseSensitive: true,
+    });
+    expect(parse("staging (env) {.exact}")).toMatchObject({ term: "staging", tooltip: false });
+  });
+});

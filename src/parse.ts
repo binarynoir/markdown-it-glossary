@@ -33,6 +33,13 @@ function stripMarkdown(text: string): string {
  * name is the canonical `term` (used on the glossary page), the rest
  * become `aliases` that tooltip with the same definition without
  * repeating it under a separate heading.
+ *
+ * ### IT, information technology {.exact}
+ *
+ * A trailing attribute block is stripped from the term. `{.exact}`
+ * matches this entry in exact case only and `{.anycase}` in any case,
+ * whatever the page's setting. Other attributes, like a `{#custom-id}`
+ * anchor, are ignored.
  * ```
  *
  * Headings inside fenced code blocks are ignored, so a page can show
@@ -69,7 +76,15 @@ export function parseGlossaryMarkdown(source: string, headingLevel = 3): Glossar
       continue;
     }
 
-    const rawHeading = heading[1].trim();
+    let rawHeading = heading[1].trim();
+    let caseSensitive: boolean | undefined;
+    const attrs = rawHeading.match(/\s*\{([^{}]*)\}\s*$/);
+    if (attrs) {
+      rawHeading = rawHeading.slice(0, attrs.index).trim();
+      const classes = attrs[1].split(/\s+/);
+      if (classes.includes(".exact")) caseSensitive = true;
+      else if (classes.includes(".anycase")) caseSensitive = false;
+    }
     const qualified = /\s*\(.+\)\s*$/.test(rawHeading);
     const unqualified = rawHeading.replace(/\s*\(.+\)\s*$/, "").trim();
     const [term, ...aliases] = unqualified
@@ -98,6 +113,7 @@ export function parseGlossaryMarkdown(source: string, headingLevel = 3): Glossar
         definition,
         tooltip: !qualified,
         ...(aliases.length > 0 ? { aliases } : {}),
+        ...(caseSensitive !== undefined ? { caseSensitive } : {}),
       });
     }
     i = j;

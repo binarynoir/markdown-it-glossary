@@ -3,7 +3,7 @@ import type { MarkdownIt, StateCore } from "markdown-it";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { parseGlossaryFrontmatter, parseGlossaryMarkdown } from "./parse.js";
-import { abbrReplace, caseInsensitiveEnvs, foldCase } from "./replace.js";
+import { abbrReplace, anyCaseKeys, foldCase } from "./replace.js";
 import {
   buildTerms,
   CASE_SENSITIVE_KEY,
@@ -16,6 +16,7 @@ import {
   resolveTerms,
   warnSiteConflicts,
   type GlossaryLayer,
+  type ResolvedTerms,
 } from "./scopes.js";
 import type { GlossaryAbbrOptions, GlossaryEntry } from "./types.js";
 
@@ -114,7 +115,7 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
 
   // Most pages in a folder resolve identically, so merge once per
   // (folder, opt-out, case) combination rather than once per page.
-  const cache = new Map<string, Record<string, string>>();
+  const cache = new Map<string, ResolvedTerms>();
   const termsFor = (
     pageDir: string | undefined,
     useLocal: boolean,
@@ -152,8 +153,12 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
         env?.frontmatter?.[CASE_SENSITIVE_KEY],
         typeof relativePath === "string" ? relativePath : "a page",
       ) ?? resolveCaseSensitive(folderLayers, master, pageDir, caseSensitive);
-    if (env && !pageCaseSensitive) caseInsensitiveEnvs.add(env);
-    else if (env) caseInsensitiveEnvs.delete(env);
+    if (!env) return;
+
+    // Page-local definitions follow the page's setting.
+    const pageLocal = Object.keys((env.abbreviations ?? {}) as Record<string, string>);
+    const anyCase = new Set(pageCaseSensitive ? [] : pageLocal);
+    anyCaseKeys.set(env, anyCase);
 
     const optOut = frontmatterKey === false ? undefined : env?.frontmatter?.[frontmatterKey];
     if (optOut === false) {
@@ -166,18 +171,18 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
     // Leave `env.abbreviations` unset when nothing applies: an empty object
     // is truthy, and markdown-it-abbr would then build an empty regex that
     // matches everywhere instead of skipping the page.
-    const terms = Object.entries(termsFor(pageDir, useLocal, useMaster, pageCaseSensitive));
+    const resolved = termsFor(pageDir, useLocal, useMaster, pageCaseSensitive);
+    const terms = Object.entries(resolved.definitions);
     if (terms.length === 0) return;
 
-    state.env.abbreviations ??= {};
-    const envAbbreviations = state.env.abbreviations as Record<string, string>;
+    env.abbreviations ??= {};
+    const envAbbreviations = env.abbreviations as Record<string, string>;
     // A page-local definition wins over every spelling it matches.
-    const pageLocal = pageCaseSensitive
-      ? undefined
-      : new Set(Object.keys(envAbbreviations).map(foldCase));
+    const pageLocalFolded = new Set([...anyCase].map(foldCase));
     for (const [key, definition] of terms) {
-      if (pageLocal?.has(foldCase(key))) continue;
-      envAbbreviations[key] ??= definition;
+      if (key in envAbbreviations || pageLocalFolded.has(foldCase(key))) continue;
+      envAbbreviations[key] = definition;
+      if (resolved.anyCase.has(key)) anyCase.add(key);
     }
   });
 }

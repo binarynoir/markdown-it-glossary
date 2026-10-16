@@ -20,6 +20,13 @@ export interface GlossaryEntry {
    * `term` is — whole words, never inside inline code.
    */
   aliases?: string[];
+  /**
+   * Match this entry's spellings in exact case only (`true`) or in any
+   * case (`false`), whatever the page's setting. Leave unset to follow
+   * the page. In a glossary file, write `{.exact}` or `{.anycase}` at
+   * the end of the heading.
+   */
+  caseSensitive?: boolean;
 }
 
 export interface GlossaryAbbrOptions {

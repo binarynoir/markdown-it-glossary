@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-16
+
+### Added
+
+- Per-term case flags: end a term's heading with `{.exact}` to match it in exact case only, or `{.anycase}` to match any case, whatever the site, section or page setting. The flag covers the term and its aliases. `GlossaryEntry` has a matching `caseSensitive` field
+
+### Fixed
+
+- A trailing attribute block on a term heading, such as a custom anchor (`### CI {#ci}`), is no longer read as part of the term
+
 ## [0.5.0] - 2026-10-16
 
 ### Added

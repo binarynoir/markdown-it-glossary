@@ -230,10 +230,16 @@ and any blockers.
   parenthetical qualifier if the whole group shouldn't auto-tooltip:
   `### PO, Product Owner (internal nickname, not client-facing)`.
 
+- **A trailing attribute block sets a term's case rule**:
+  `### IT {.exact}` matches only `IT`, and `### standup {.anycase}`
+  matches any case, whatever the page's setting. See
+  [Per-term flags](#per-term-flags). Other attributes, like a custom
+  anchor (`### CI {#ci}`), are stripped from the term.
+
 ## Case sensitivity
 
 Terms match regardless of case by default. Turn exact-case matching on
-or off at four levels. The closest setting to the page wins:
+or off at five levels. The closest setting to the term wins:
 
 | Where                        | Setting                         | Applies to                            |
 | ---------------------------- | ------------------------------- | ------------------------------------- |
@@ -241,6 +247,7 @@ or off at four levels. The closest setting to the page wins:
 | Master glossary frontmatter  | `glossary-case-sensitive: true` | the whole site, overriding the option |
 | Section glossary frontmatter | `glossary-case-sensitive: true` | that folder and every folder below it |
 | Any page's frontmatter       | `glossary-case-sensitive: true` | that page only                        |
+| The term's heading           | `### IT {.exact}`               | that term, on every page              |
 
 Use `false` at any level to turn it back off below that point:
 
@@ -275,11 +282,36 @@ Details worth knowing:
   "not tooltipped" `api (internal)` hides it. When case matters, `api`
   and `API` are separate terms.
 - **Short acronyms can collide with ordinary words** when case is
-  ignored (`IT` matches "it", `US` matches "us"). Give that page or
-  section `glossary-case-sensitive: true`, or mark the term not
-  tooltipped.
+  ignored (`IT` matches "it", `US` matches "us"). Flag the term
+  `{.exact}`.
 - For explicit `scopes`, set `caseSensitive` on the scope instead; it
   defaults to the file's frontmatter.
+
+### Per-term flags
+
+End a term's heading with `{.exact}` or `{.anycase}` to fix its case
+rule regardless of the site, section or page setting:
+
+```md
+### IT, Information Technology {.exact}
+
+The team that runs our laptops and servers.
+
+### standup {.anycase}
+
+A short daily sync.
+```
+
+- **The flag covers the whole heading**, aliases included. To give two
+  spellings different rules, write them as separate headings.
+- **It works alongside other attributes**: `{#it .exact}` keeps a
+  custom anchor too. VitePress hides the block on the rendered glossary
+  page; other renderers may show it as text.
+- **An `{.exact}` term claims only its own spelling.** If a closer
+  glossary has `IT {.exact}` and a farther one has `it`, `IT` gets the
+  closer definition and `it` the farther one. An any-case term claims
+  every casing, so a closer `it` overrides a farther `IT {.exact}`.
+- With `entries`, set `caseSensitive: true` or `false` on the entry.
 
 ## Section glossaries
 
@@ -551,6 +583,8 @@ interface GlossaryEntry {
   tooltip?: boolean;
   /** Other spellings that tooltip with this same definition. */
   aliases?: string[];
+  /** `true` = exact case only, `false` = any case; unset follows the page. */
+  caseSensitive?: boolean;
 }
 
 interface ScopedGlossary {

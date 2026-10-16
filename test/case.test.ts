@@ -198,3 +198,63 @@ describe("closest glossary wins across casings", () => {
     expect(html).toContain('<abbr title="Team api.">api</abbr>');
   });
 });
+
+describe("per-term case flags", () => {
+  const flagged = (heading: string) => `### ${heading}\n\nDef of ${heading.split(" ")[0]}.\n\n`;
+
+  function siteWith(master: string, extra: Record<string, string> = {}) {
+    const root = site({ "glossary.md": master, ...extra });
+    return new MarkdownIt().use(glossaryAbbr, { file: path.join(root, "glossary.md"), root });
+  }
+
+  it("{.exact} matches only the written case on an any-case site", () => {
+    const md = siteWith(flagged("IT {.exact}") + flagged("API"));
+    const html = md.render("IT and it, API and api.", { relativePath: "page.md" });
+    expect(html.match(/<abbr/g)).toHaveLength(3);
+    expect(html).toContain(">IT</abbr>");
+    expect(html).not.toContain(">it</abbr>");
+  });
+
+  it("{.exact} beats a page that ignores case", () => {
+    const md = siteWith(fm(true) + flagged("IT {.exact}"));
+    const html = md.render("it", {
+      relativePath: "page.md",
+      frontmatter: { "glossary-case-sensitive": false },
+    });
+    expect(html).not.toContain("<abbr");
+  });
+
+  it("{.anycase} matches any case on a case-sensitive site", () => {
+    const md = siteWith(fm(true) + flagged("standup {.anycase}") + flagged("API"));
+    const html = md.render("Standup and api.", { relativePath: "page.md" });
+    expect(html.match(/<abbr/g)).toHaveLength(1);
+    expect(html).toContain(">Standup</abbr>");
+  });
+
+  it("the flag covers every alias in the heading", () => {
+    const md = siteWith(flagged("IT, Info Tech {.exact}"));
+    const html = md.render("it, info tech, IT, Info Tech", { relativePath: "page.md" });
+    expect(html.match(/<abbr/g)).toHaveLength(2);
+  });
+
+  it("an exact term claims only its own spelling", () => {
+    const md = siteWith(flagged("it"), { "team/glossary.md": flagged("IT {.exact}") });
+    const html = md.render("IT and it", { relativePath: "team/page.md" });
+    expect(html).toContain('<abbr title="Def of IT.">IT</abbr>');
+    expect(html).toContain('<abbr title="Def of it.">it</abbr>');
+  });
+
+  it("an any-case term claims every casing from farther glossaries", () => {
+    const md = siteWith(flagged("IT {.exact}"), { "team/glossary.md": flagged("it") });
+    const html = md.render("IT", { relativePath: "team/page.md" });
+    expect(html).toContain('<abbr title="Def of it.">IT</abbr>');
+  });
+
+  it("works with entries", () => {
+    const html = render(
+      { entries: [{ term: "IT", definition: "Info Tech.", caseSensitive: true }] },
+      "it and IT",
+    );
+    expect(html.match(/<abbr/g)).toHaveLength(1);
+  });
+});

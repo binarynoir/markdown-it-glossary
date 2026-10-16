@@ -1,19 +1,20 @@
 import type { MarkdownIt, StateCore } from "markdown-it";
 
 /**
- * Case-insensitive pages, keyed by `state.env`. The inject rule records
- * each page's mode here and the replace rule reads it.
+ * The abbreviation keys that match in any case on a page, keyed by
+ * `state.env`. The inject rule records them and the replace rule reads
+ * them; every other key matches in exact case only.
  */
-export const caseInsensitiveEnvs = new WeakSet<object>();
+export const anyCaseKeys = new WeakMap<object, Set<string>>();
 
 /** Normalizes an abbreviation key for case-insensitive comparison. */
 export const foldCase = (key: string): string => key.toLowerCase();
 
 /**
  * A drop-in replacement for markdown-it-abbr's `abbr_replace` rule that
- * can also match case-insensitively. In that mode the text keeps the
- * casing it was written in, and its definition is looked up by exact
- * key first, then case-folded.
+ * can also match some or all terms case-insensitively. The text keeps
+ * the casing it was written in, and its definition is looked up by exact
+ * key first, then case-folded among the any-case keys.
  */
 export function abbrReplace(md: MarkdownIt): (state: StateCore) => void {
   const { escapeRE, arrayReplaceAt } = md.utils;
@@ -36,7 +37,8 @@ export function abbrReplace(md: MarkdownIt): (state: StateCore) => void {
     const abbreviations = state.env?.abbreviations as Record<string, string> | undefined;
     if (!abbreviations) return;
 
-    const insensitive = caseInsensitiveEnvs.has(state.env);
+    const anyCase = anyCaseKeys.get(state.env);
+    const insensitive = anyCase !== undefined && anyCase.size > 0;
     const labels = Object.keys(abbreviations)
       .map((key) => key.slice(1))
       .sort((a, b) => b.length - a.length)
@@ -53,7 +55,7 @@ export function abbrReplace(md: MarkdownIt): (state: StateCore) => void {
     const folded = new Map<string, string>();
     if (insensitive) {
       for (const [key, definition] of Object.entries(abbreviations)) {
-        if (!folded.has(foldCase(key))) folded.set(foldCase(key), definition);
+        if (anyCase.has(key) && !folded.has(foldCase(key))) folded.set(foldCase(key), definition);
       }
     }
     const definitionFor = (text: string): string | undefined =>
