@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parseGlossaryFrontmatter, parseGlossaryMarkdown } from "./parse.js";
+import { foldCase } from "./replace.js";
 import type { GlossaryEntry, ScopedGlossary } from "./types.js";
 
 /**
@@ -8,13 +9,34 @@ import type { GlossaryEntry, ScopedGlossary } from "./types.js";
  * relative to the docs root in POSIX form (`""` = the root itself).
  * `terms` maps markdown-it-abbr keys (`":" + text`) to a definition, or
  * to `null` for a term that is deliberately not tooltipped here (see
- * {@link resolveTerms}).
+ * {@link resolveTerms}). `caseSensitive` is the layer's own setting, or
+ * `undefined` to inherit one (see {@link resolveCaseSensitive}).
  */
 export interface GlossaryLayer {
   dir: string;
   site: boolean;
   source: string;
   terms: Map<string, string | null>;
+  caseSensitive?: boolean;
+}
+
+/** Frontmatter key that sets case sensitivity, in glossary files and pages alike. */
+export const CASE_SENSITIVE_KEY = "glossary-case-sensitive";
+
+/**
+ * Reads a `glossary-case-sensitive` value: a boolean (as a host's YAML
+ * parser gives it) or the string `"true"` / `"false"` (as
+ * {@link parseGlossaryFrontmatter} gives it). Anything else is ignored
+ * with a warning.
+ */
+export function parseCaseSensitive(value: unknown, label: string): boolean | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
+  console.warn(
+    `markdown-it-glossary: ${label} has ${CASE_SENSITIVE_KEY} "${String(value)}"; expected true or false. Ignoring it.`,
+  );
+  return undefined;
 }
 
 const SKIP_DIRS = new Set(["node_modules", "dist", "cache"]);
@@ -51,7 +73,8 @@ function layerFromSource(
   label: string,
   headingLevel: number,
 ): GlossaryLayer {
-  const scope = parseGlossaryFrontmatter(source)["glossary-scope"];
+  const frontmatter = parseGlossaryFrontmatter(source);
+  const scope = frontmatter["glossary-scope"];
   if (scope !== undefined && scope !== "site" && scope !== "section") {
     console.warn(
       `markdown-it-glossary: ${label} has glossary-scope "${scope}"; expected "site" or "section". Using "section".`,
@@ -62,6 +85,7 @@ function layerFromSource(
     site: site ?? scope === "site",
     source: label,
     terms: buildTerms(parseGlossaryMarkdown(source, headingLevel)),
+    caseSensitive: parseCaseSensitive(frontmatter[CASE_SENSITIVE_KEY], label),
   };
 }
 
@@ -107,16 +131,24 @@ export function layerFromScope(scope: ScopedGlossary, headingLevel: number): Glo
     );
   }
   if (scope.entries) {
-    return { dir, site: scope.site ?? false, source: scope.dir, terms: buildTerms(scope.entries) };
+    return {
+      dir,
+      site: scope.site ?? false,
+      source: scope.dir,
+      terms: buildTerms(scope.entries),
+      caseSensitive: scope.caseSensitive,
+    };
   }
   if (scope.file) {
-    return layerFromSource(
+    const layer = layerFromSource(
       readFileSync(scope.file, "utf8"),
       dir,
       scope.site,
       scope.file,
       headingLevel,
     );
+    if (scope.caseSensitive !== undefined) layer.caseSensitive = scope.caseSensitive;
+    return layer;
   }
   throw new Error(`markdown-it-glossary: scope "${scope.dir}" needs \`entries\` or \`file\`.`);
 }
@@ -157,19 +189,48 @@ export function orderLayers(
 }
 
 /**
+ * Decides whether a page matches terms case-sensitively. Like CSS
+ * inheritance, the setting comes from the closest place that sets it:
+ * the nearest section glossary whose folder contains the page, then the
+ * master glossary, then `fallback` (the plugin option). The page's own
+ * frontmatter, checked by the caller, beats all of these.
+ */
+export function resolveCaseSensitive(
+  folderLayers: GlossaryLayer[],
+  master: GlossaryLayer,
+  pageDir: string | undefined,
+  fallback: boolean,
+): boolean {
+  if (pageDir !== undefined) {
+    const nearest = folderLayers
+      .filter((l) => l.caseSensitive !== undefined && covers(l.dir, pageDir))
+      .sort((a, b) => b.dir.length - a.dir.length)[0];
+    if (nearest) return nearest.caseSensitive as boolean;
+  }
+  return master.caseSensitive ?? fallback;
+}
+
+/**
  * Merges layers (highest precedence first) into one abbreviation map.
  * The first layer to mention a term decides it. A `null` entry (a term
  * marked "not tooltipped") counts as a decision too: it hides that term
  * from every lower-precedence layer, so a section can say "this word is
  * ambiguous here" and not inherit the master's tooltip for it.
+ *
+ * When `caseSensitive` is `false`, spellings that differ only in case
+ * are the same term, so `api` in a closer glossary decides `API` too.
  */
-export function resolveTerms(layers: GlossaryLayer[]): Record<string, string> {
+export function resolveTerms(
+  layers: GlossaryLayer[],
+  caseSensitive = true,
+): Record<string, string> {
   const decided = new Set<string>();
   const merged: Record<string, string> = {};
   for (const layer of layers) {
     for (const [key, definition] of layer.terms) {
-      if (decided.has(key)) continue;
-      decided.add(key);
+      const id = caseSensitive ? key : foldCase(key);
+      if (decided.has(id)) continue;
+      decided.add(id);
       if (definition !== null) merged[key] = definition;
     }
   }

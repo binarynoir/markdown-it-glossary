@@ -1,5 +1,8 @@
 export interface GlossaryEntry {
-  /** The exact text to match and wrap in <abbr>. Matching is case-sensitive. */
+  /**
+   * The text to match and wrap in <abbr>. Matching ignores case unless
+   * case sensitivity is turned on (see `caseSensitive`).
+   */
   term: string;
   /** Plain text used as the tooltip (the <abbr title="...">). Keep it short. */
   definition: string;
@@ -14,7 +17,7 @@ export interface GlossaryEntry {
    * Other exact-text spellings (an abbreviation, a full expansion, etc.)
    * that should tooltip with this same definition, without duplicating
    * it under a separate heading. Each alias is matched the same way
-   * `term` is — exact-text, case-sensitive, never inside inline code.
+   * `term` is — whole words, never inside inline code.
    */
   aliases?: string[];
 }
@@ -55,6 +58,14 @@ export interface GlossaryAbbrOptions {
   scopedFile?: string;
   /** Section glossaries declared explicitly, in addition to any found under `root`. */
   scopes?: ScopedGlossary[];
+  /**
+   * Match terms only when their case matches the glossary exactly
+   * (`API` but not `api`). This is the site-wide default; the master
+   * glossary, a section glossary, or a single page can override it with
+   * `glossary-case-sensitive: true | false` in its frontmatter.
+   * Default: `false`.
+   */
+  caseSensitive?: boolean;
 }
 
 /**
@@ -75,4 +86,10 @@ export interface ScopedGlossary {
    * `glossary-scope` frontmatter (`site`), else `false`.
    */
   site?: boolean;
+  /**
+   * Case sensitivity for pages in `dir` and below. Defaults to the
+   * file's `glossary-case-sensitive` frontmatter, else inherited from
+   * the next glossary up.
+   */
+  caseSensitive?: boolean;
 }

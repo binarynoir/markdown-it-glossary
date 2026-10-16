@@ -1,13 +1,18 @@
 import markdownItAbbr from "markdown-it-abbr";
 import type { MarkdownIt, StateCore } from "markdown-it";
+import { readFileSync } from "node:fs";
 import path from "node:path";
-import { loadGlossaryFile } from "./parse.js";
+import { parseGlossaryFrontmatter, parseGlossaryMarkdown } from "./parse.js";
+import { abbrReplace, caseInsensitiveEnvs, foldCase } from "./replace.js";
 import {
   buildTerms,
+  CASE_SENSITIVE_KEY,
   discoverLayers,
   layerFromScope,
   orderLayers,
   pageDirOf,
+  parseCaseSensitive,
+  resolveCaseSensitive,
   resolveTerms,
   warnSiteConflicts,
   type GlossaryLayer,
@@ -57,6 +62,11 @@ import type { GlossaryAbbrOptions, GlossaryEntry } from "./types.js";
  * syntax) always wins over a site-wide definition for that term on that
  * page, since it's set during block parsing, before this plugin's core
  * rule runs.
+ *
+ * Matching ignores case by default. `caseSensitive: true` changes the
+ * site-wide default, and `glossary-case-sensitive: true | false` in the
+ * frontmatter of the master glossary, a section glossary (its folder and
+ * below), or any page overrides it, closest setting winning.
  */
 export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}): void {
   const {
@@ -67,6 +77,7 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
     root,
     scopedFile = "glossary.md",
     scopes = [],
+    caseSensitive = false,
   } = options;
 
   if (!entries && !file) {
@@ -76,8 +87,9 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
     throw new Error("markdown-it-glossary: pass either `entries` or `file`, not both.");
   }
 
+  const masterSource = file ? readFileSync(file, "utf8") : undefined;
   const resolvedEntries: GlossaryEntry[] =
-    entries ?? loadGlossaryFile(file as string, headingLevel);
+    entries ?? parseGlossaryMarkdown(masterSource as string, headingLevel);
 
   // Keys follow markdown-it-abbr's own `state.env.abbreviations`
   // convention (a leading ":" avoids clobbering Object.prototype members).
@@ -86,6 +98,10 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
     site: true,
     source: file ?? "entries",
     terms: buildTerms(resolvedEntries),
+    caseSensitive:
+      masterSource === undefined
+        ? undefined
+        : parseCaseSensitive(parseGlossaryFrontmatter(masterSource)[CASE_SENSITIVE_KEY], file!),
   };
 
   const folderLayers: GlossaryLayer[] = [
@@ -97,25 +113,48 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
   warnSiteConflicts(folderLayers);
 
   // Most pages in a folder resolve identically, so merge once per
-  // (folder, opt-out) combination rather than once per page.
+  // (folder, opt-out, case) combination rather than once per page.
   const cache = new Map<string, Record<string, string>>();
-  const termsFor = (pageDir: string | undefined, useLocal: boolean, useMaster: boolean) => {
-    const cacheKey = `${pageDir ?? "\0"}|${useLocal}|${useMaster}`;
+  const termsFor = (
+    pageDir: string | undefined,
+    useLocal: boolean,
+    useMaster: boolean,
+    pageCaseSensitive: boolean,
+  ) => {
+    const cacheKey = `${pageDir ?? "\0"}|${useLocal}|${useMaster}|${pageCaseSensitive}`;
     let terms = cache.get(cacheKey);
     if (!terms) {
-      terms = resolveTerms(orderLayers(folderLayers, master, pageDir, useLocal, useMaster));
+      terms = resolveTerms(
+        orderLayers(folderLayers, master, pageDir, useLocal, useMaster),
+        pageCaseSensitive,
+      );
       cache.set(cacheKey, terms);
     }
     return terms;
   };
 
   md.use(markdownItAbbr);
+  // markdown-it-abbr only matches exact case; this replacement can do both.
+  md.core.ruler.at("abbr_replace", abbrReplace(md));
 
   md.core.ruler.before("abbr_replace", "glossary_abbr_inject", (state: StateCore) => {
     let useMaster = true;
     let useLocal = true;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const env = state.env as any;
+    const relativePath: unknown = env?.relativePath;
+    const pageDir = typeof relativePath === "string" ? pageDirOf(relativePath) : undefined;
+
+    // Decided even on opted-out pages, since it also applies to the
+    // page's own `*[Term]: …` definitions.
+    const pageCaseSensitive =
+      parseCaseSensitive(
+        env?.frontmatter?.[CASE_SENSITIVE_KEY],
+        typeof relativePath === "string" ? relativePath : "a page",
+      ) ?? resolveCaseSensitive(folderLayers, master, pageDir, caseSensitive);
+    if (env && !pageCaseSensitive) caseInsensitiveEnvs.add(env);
+    else if (env) caseInsensitiveEnvs.delete(env);
+
     const optOut = frontmatterKey === false ? undefined : env?.frontmatter?.[frontmatterKey];
     if (optOut === false) {
       return;
@@ -124,18 +163,20 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
       useLocal = optOut.local !== false;
     }
 
-    const relativePath: unknown = env?.relativePath;
-    const pageDir = typeof relativePath === "string" ? pageDirOf(relativePath) : undefined;
-
     // Leave `env.abbreviations` unset when nothing applies: an empty object
     // is truthy, and markdown-it-abbr would then build an empty regex that
     // matches everywhere instead of skipping the page.
-    const terms = Object.entries(termsFor(pageDir, useLocal, useMaster));
+    const terms = Object.entries(termsFor(pageDir, useLocal, useMaster, pageCaseSensitive));
     if (terms.length === 0) return;
 
     state.env.abbreviations ??= {};
     const envAbbreviations = state.env.abbreviations as Record<string, string>;
+    // A page-local definition wins over every spelling it matches.
+    const pageLocal = pageCaseSensitive
+      ? undefined
+      : new Set(Object.keys(envAbbreviations).map(foldCase));
     for (const [key, definition] of terms) {
+      if (pageLocal?.has(foldCase(key))) continue;
       envAbbreviations[key] ??= definition;
     }
   });

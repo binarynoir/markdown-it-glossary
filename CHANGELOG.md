@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-16
+
+### Added
+
+- Case sensitivity can be turned on or off site-wide with the new `caseSensitive` option, or with `glossary-case-sensitive: true | false` in the frontmatter of the master glossary (whole site), a section glossary (its folder and below) or any page (that page). The closest setting wins
+- `caseSensitive` on explicit `scopes` entries
+
+### Changed
+
+- **Matching now ignores case by default.** `API` in a glossary also tooltips `api` and `Api`, keeping the text as written. Set `caseSensitive: true` to keep the old exact-case behavior
+- When case is ignored, spellings that differ only in case count as one term when deciding which glossary wins
+- The plugin now replaces markdown-it-abbr's `abbr_replace` rule with its own, which supports both modes. Page-local `*[Term]: …` definitions follow the page's case setting
+
 ## [0.4.4] - 2026-10-15
 
 ### Changed

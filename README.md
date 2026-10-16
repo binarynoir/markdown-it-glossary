@@ -192,11 +192,11 @@ and any blockers.
   formatting (`**bold**`, `` `code` ``, `[links](...)`) is stripped down
   to plain text for the `title` attribute — keep it to one or two
   sentences; a long tooltip is a bad tooltip.
-- **Matching is exact-text and case-sensitive**, and only matches plain
-  prose — never text inside inline code spans (`` `like this` ``).
-  Write the heading in whatever casing the term actually appears in
-  prose: lowercase for a common phrase (`standup`), normal
-  capitalization for a proper noun or acronym (`CI`, `API`).
+- **Matching ignores case by default** (`API` also matches `api` and
+  `Api`), matches whole words only, and only matches plain prose — never
+  text inside inline code spans (`` `like this` ``). The text keeps the
+  casing it was written in. To match exact case only, see
+  [Case sensitivity](#case-sensitivity).
 - **A heading with a parenthetical qualifier is parsed but never
   tooltipped:**
 
@@ -229,6 +229,57 @@ and any blockers.
   tooltip site-wide with the same definition. Combine with a
   parenthetical qualifier if the whole group shouldn't auto-tooltip:
   `### PO, Product Owner (internal nickname, not client-facing)`.
+
+## Case sensitivity
+
+Terms match regardless of case by default. Turn exact-case matching on
+or off at four levels. The closest setting to the page wins:
+
+| Where                        | Setting                         | Applies to                            |
+| ---------------------------- | ------------------------------- | ------------------------------------- |
+| Plugin options               | `caseSensitive: true`           | the whole site (the base default)     |
+| Master glossary frontmatter  | `glossary-case-sensitive: true` | the whole site, overriding the option |
+| Section glossary frontmatter | `glossary-case-sensitive: true` | that folder and every folder below it |
+| Any page's frontmatter       | `glossary-case-sensitive: true` | that page only                        |
+
+Use `false` at any level to turn it back off below that point:
+
+```md
+---
+# docs/reference/glossary.md (the master)
+glossary-case-sensitive: true
+---
+```
+
+```md
+---
+# docs/team-a/glossary.md: team-a/ ignores case again
+glossary-case-sensitive: false
+---
+```
+
+Details worth knowing:
+
+- **The setting follows folders, not terms.** It controls how every term
+  on a page is matched, whichever glossary the term came from. A section
+  glossary's setting covers its own folder even if it is marked
+  `glossary-scope: site`; the setting doesn't travel with its terms to
+  other folders.
+- **A section glossary without the key inherits** from the next
+  glossary up, then the master, then the option.
+- **Opt-outs don't change it.** `glossary: false` or `{ master: false }`
+  drops terms, not the setting, and page-local `*[Term]: …` definitions
+  follow the page's setting too.
+- **When case is ignored, spellings that differ only in case are one
+  term.** A closer glossary's `api` overrides the master's `API`, and a
+  "not tooltipped" `api (internal)` hides it. When case matters, `api`
+  and `API` are separate terms.
+- **Short acronyms can collide with ordinary words** when case is
+  ignored (`IT` matches "it", `US` matches "us"). Give that page or
+  section `glossary-case-sensitive: true`, or mark the term not
+  tooltipped.
+- For explicit `scopes`, set `caseSensitive` on the scope instead; it
+  defaults to the file's frontmatter.
 
 ## Section glossaries
 
@@ -437,7 +488,8 @@ We cut a release every sprint, and each one is gated on CI passing.
 *[CI]: Continuous Integration — only this page's definition applies.
 ```
 
-Every exact, case-sensitive occurrence of `CI` on that page becomes an
+Every occurrence of `CI` on that page (in any case, unless the page is
+[case-sensitive](#case-sensitivity)) becomes an
 `<abbr title="...">`, and nothing else from the glossary does. The
 definition line itself isn't rendered. This is how you keep a few terms
 on a page that is otherwise opted out, or define terms that aren't in the
@@ -473,6 +525,8 @@ The same options object works for both `glossaryAbbr(md, options)` and
   root: string,                // docs source dir; enables folder discovery
   scopedFile: "glossary.md",   // file name that marks a section glossary
   scopes: ScopedGlossary[],    // explicit section glossaries
+
+  caseSensitive: false,        // site-wide default — see "Case sensitivity"
 }
 ```
 
@@ -504,6 +558,7 @@ interface ScopedGlossary {
   file?: string; // glossary Markdown file (or `entries`)
   entries?: GlossaryEntry[];
   site?: boolean; // apply site-wide; defaults to the file's `glossary-scope`
+  caseSensitive?: boolean; // for `dir` and below; defaults to the file's `glossary-case-sensitive`
 }
 ```
 
