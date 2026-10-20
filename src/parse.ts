@@ -38,8 +38,9 @@ function stripMarkdown(text: string): string {
  *
  * A trailing attribute block is stripped from the term. `{.exact}`
  * matches this entry in exact case only and `{.anycase}` in any case,
- * whatever the page's setting. Other attributes, like a `{#custom-id}`
- * anchor, are ignored.
+ * whatever the page's setting. `{.off}` keeps the entry but never
+ * tooltips it, like a parenthetical qualifier. Other attributes, like a
+ * `{#custom-id}` anchor, are ignored.
  * ```
  *
  * Headings inside fenced code blocks are ignored, so a page can show
@@ -78,12 +79,14 @@ export function parseGlossaryMarkdown(source: string, headingLevel = 3): Glossar
 
     let rawHeading = heading[1].trim();
     let caseSensitive: boolean | undefined;
+    let off = false;
     const attrs = rawHeading.match(/\s*\{([^{}]*)\}\s*$/);
     if (attrs) {
       rawHeading = rawHeading.slice(0, attrs.index).trim();
       const classes = attrs[1].split(/\s+/);
       if (classes.includes(".exact")) caseSensitive = true;
       else if (classes.includes(".anycase")) caseSensitive = false;
+      off = classes.includes(".off");
     }
     const qualified = /\s*\(.+\)\s*$/.test(rawHeading);
     const unqualified = rawHeading.replace(/\s*\(.+\)\s*$/, "").trim();
@@ -111,7 +114,7 @@ export function parseGlossaryMarkdown(source: string, headingLevel = 3): Glossar
       entries.push({
         term,
         definition,
-        tooltip: !qualified,
+        tooltip: !qualified && !off,
         ...(aliases.length > 0 ? { aliases } : {}),
         ...(caseSensitive !== undefined ? { caseSensitive } : {}),
       });

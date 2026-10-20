@@ -1,11 +1,17 @@
 import type { MarkdownIt, StateCore } from "markdown-it";
 
-/**
- * The abbreviation keys that match in any case on a page, keyed by
- * `state.env`. The inject rule records them and the replace rule reads
- * them; every other key matches in exact case only.
- */
-export const anyCaseKeys = new WeakMap<object, Set<string>>();
+/** How the replace rule should match on one page. */
+export interface PageMatching {
+  /** Keys that match in any case; every other key matches exact case only. */
+  anyCase: Set<string>;
+  /** The glossary entry each key belongs to, so aliases count as one term. */
+  entryOf: Map<string, string>;
+  /** Tooltip only the first mention of each term. */
+  firstOnly: boolean;
+}
+
+/** Each page's matching rules, keyed by `state.env`; set by the inject rule. */
+export const pageMatching = new WeakMap<object, PageMatching>();
 
 /** Normalizes an abbreviation key for case-insensitive comparison. */
 export const foldCase = (key: string): string => key.toLowerCase();
@@ -37,7 +43,8 @@ export function abbrReplace(md: MarkdownIt): (state: StateCore) => void {
     const abbreviations = state.env?.abbreviations as Record<string, string> | undefined;
     if (!abbreviations) return;
 
-    const anyCase = anyCaseKeys.get(state.env);
+    const matching = pageMatching.get(state.env);
+    const anyCase = matching?.anyCase;
     const insensitive = anyCase !== undefined && anyCase.size > 0;
     const labels = Object.keys(abbreviations)
       .map((key) => key.slice(1))
@@ -54,19 +61,28 @@ export function abbrReplace(md: MarkdownIt): (state: StateCore) => void {
     // definitions were added (page-local first, then closest glossary).
     const folded = new Map<string, string>();
     if (insensitive) {
-      for (const [key, definition] of Object.entries(abbreviations)) {
-        if (anyCase.has(key) && !folded.has(foldCase(key))) folded.set(foldCase(key), definition);
+      for (const key of Object.keys(abbreviations)) {
+        if (anyCase.has(key) && !folded.has(foldCase(key))) folded.set(foldCase(key), key);
       }
     }
-    const definitionFor = (text: string): string | undefined =>
-      abbreviations[":" + text] ?? (insensitive ? folded.get(foldCase(":" + text)) : undefined);
+    const keyFor = (text: string): string | undefined =>
+      ":" + text in abbreviations
+        ? ":" + text
+        : insensitive
+          ? folded.get(foldCase(":" + text))
+          : undefined;
+
+    // With `firstOnly`, the terms already tooltipped on this page. A
+    // page-local key that isn't a glossary entry counts by its spelling.
+    const seen = new Set<string>();
+    const entryFor = (key: string): string => matching?.entryOf.get(key) ?? "local" + foldCase(key);
 
     for (const blockToken of state.tokens) {
       if (blockToken.type !== "inline" || !blockToken.children) continue;
       let tokens = blockToken.children;
 
-      // Scan from the end so earlier indexes stay valid as tokens are added.
-      for (let i = tokens.length - 1; i >= 0; i--) {
+      // Scan in document order, so `firstOnly` keeps the first mention.
+      for (let i = 0; i < tokens.length; i++) {
         const current = tokens[i];
         if (current.type !== "text") continue;
 
@@ -81,8 +97,14 @@ export function abbrReplace(md: MarkdownIt): (state: StateCore) => void {
         while ((m = reg.exec(text))) {
           // Back up over the trailing boundary so it can start the next match.
           reg.lastIndex -= m[3].length;
-          const definition = definitionFor(m[2]);
-          if (definition === undefined) continue;
+          const key = keyFor(m[2]);
+          if (key === undefined) continue;
+          if (matching?.firstOnly) {
+            const entry = entryFor(key);
+            if (seen.has(entry)) continue;
+            seen.add(entry);
+          }
+          const definition = abbreviations[key];
 
           const start = m.index + m[1].length;
           if (start > pos) {
@@ -112,6 +134,8 @@ export function abbrReplace(md: MarkdownIt): (state: StateCore) => void {
         }
 
         blockToken.children = tokens = arrayReplaceAt(tokens, i, nodes);
+        // Skip past the new tokens rather than scanning them again.
+        i += nodes.length - 1;
       }
     }
   };

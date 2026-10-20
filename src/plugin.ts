@@ -3,16 +3,17 @@ import type { MarkdownIt, StateCore } from "markdown-it";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { parseGlossaryFrontmatter, parseGlossaryMarkdown } from "./parse.js";
-import { abbrReplace, anyCaseKeys, foldCase } from "./replace.js";
+import { abbrReplace, foldCase, pageMatching } from "./replace.js";
 import {
   buildTerms,
   CASE_SENSITIVE_KEY,
   discoverLayers,
+  FIRST_ONLY_KEY,
   layerFromScope,
   orderLayers,
   pageDirOf,
-  parseCaseSensitive,
-  resolveCaseSensitive,
+  parseFlag,
+  resolveSetting,
   resolveTerms,
   warnSiteConflicts,
   type GlossaryLayer,
@@ -68,6 +69,10 @@ import type { GlossaryAbbrOptions, GlossaryEntry } from "./types.js";
  * site-wide default, and `glossary-case-sensitive: true | false` in the
  * frontmatter of the master glossary, a section glossary (its folder and
  * below), or any page overrides it, closest setting winning.
+ * `firstOnly` and `glossary-first-only` work the same way, tooltipping
+ * only the first mention of each term on a page.
+ *
+ * A page drops individual terms with `glossary: { exclude: [...] }`.
  */
 export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}): void {
   const {
@@ -79,6 +84,7 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
     scopedFile = "glossary.md",
     scopes = [],
     caseSensitive = false,
+    firstOnly = false,
   } = options;
 
   if (!entries && !file) {
@@ -94,15 +100,14 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
 
   // Keys follow markdown-it-abbr's own `state.env.abbreviations`
   // convention (a leading ":" avoids clobbering Object.prototype members).
+  const masterFrontmatter = masterSource ? parseGlossaryFrontmatter(masterSource) : {};
   const master: GlossaryLayer = {
     dir: "",
     site: true,
     source: file ?? "entries",
     terms: buildTerms(resolvedEntries),
-    caseSensitive:
-      masterSource === undefined
-        ? undefined
-        : parseCaseSensitive(parseGlossaryFrontmatter(masterSource)[CASE_SENSITIVE_KEY], file!),
+    caseSensitive: parseFlag(CASE_SENSITIVE_KEY, masterFrontmatter[CASE_SENSITIVE_KEY], file ?? ""),
+    firstOnly: parseFlag(FIRST_ONLY_KEY, masterFrontmatter[FIRST_ONLY_KEY], file ?? ""),
   };
 
   const folderLayers: GlossaryLayer[] = [
@@ -114,20 +119,28 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
   warnSiteConflicts(folderLayers);
 
   // Most pages in a folder resolve identically, so merge once per
-  // (folder, opt-out, case) combination rather than once per page.
+  // (folder, opt-out, case, exclusions) combination rather than once per page.
   const cache = new Map<string, ResolvedTerms>();
   const termsFor = (
     pageDir: string | undefined,
     useLocal: boolean,
     useMaster: boolean,
     pageCaseSensitive: boolean,
+    exclude: Set<string>,
   ) => {
-    const cacheKey = `${pageDir ?? "\0"}|${useLocal}|${useMaster}|${pageCaseSensitive}`;
+    const cacheKey = [
+      pageDir ?? "\0",
+      useLocal,
+      useMaster,
+      pageCaseSensitive,
+      ...[...exclude].sort(),
+    ].join("|");
     let terms = cache.get(cacheKey);
     if (!terms) {
       terms = resolveTerms(
         orderLayers(folderLayers, master, pageDir, useLocal, useMaster),
         pageCaseSensitive,
+        exclude,
       );
       cache.set(cacheKey, terms);
     }
@@ -148,30 +161,46 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
 
     // Decided even on opted-out pages, since it also applies to the
     // page's own `*[Term]: …` definitions.
-    const pageCaseSensitive =
-      parseCaseSensitive(
-        env?.frontmatter?.[CASE_SENSITIVE_KEY],
-        typeof relativePath === "string" ? relativePath : "a page",
-      ) ?? resolveCaseSensitive(folderLayers, master, pageDir, caseSensitive);
+    const label = typeof relativePath === "string" ? relativePath : "a page";
+    const pageSetting = (key: string, setting: "caseSensitive" | "firstOnly", fallback: boolean) =>
+      parseFlag(key, env?.frontmatter?.[key], label) ??
+      resolveSetting(setting, folderLayers, master, pageDir, fallback);
+    const pageCaseSensitive = pageSetting(CASE_SENSITIVE_KEY, "caseSensitive", caseSensitive);
     if (!env) return;
 
     // Page-local definitions follow the page's setting.
     const pageLocal = Object.keys((env.abbreviations ?? {}) as Record<string, string>);
     const anyCase = new Set(pageCaseSensitive ? [] : pageLocal);
-    anyCaseKeys.set(env, anyCase);
+    const entryOf = new Map<string, string>();
+    pageMatching.set(env, {
+      anyCase,
+      entryOf,
+      firstOnly: pageSetting(FIRST_ONLY_KEY, "firstOnly", firstOnly),
+    });
 
     const optOut = frontmatterKey === false ? undefined : env?.frontmatter?.[frontmatterKey];
+    const exclude = new Set<string>();
     if (optOut === false) {
       return;
     } else if (optOut && typeof optOut === "object") {
       useMaster = optOut.master !== false;
       useLocal = optOut.local !== false;
+      const excluded: unknown = optOut.exclude;
+      if (typeof excluded === "string") {
+        exclude.add(foldCase(":" + excluded));
+      } else if (Array.isArray(excluded)) {
+        for (const name of excluded) exclude.add(foldCase(":" + String(name)));
+      } else if (excluded !== undefined && excluded !== null) {
+        console.warn(
+          `markdown-it-glossary: ${label} has ${frontmatterKey}.exclude that is not a list of terms. Ignoring it.`,
+        );
+      }
     }
 
     // Leave `env.abbreviations` unset when nothing applies: an empty object
     // is truthy, and markdown-it-abbr would then build an empty regex that
     // matches everywhere instead of skipping the page.
-    const resolved = termsFor(pageDir, useLocal, useMaster, pageCaseSensitive);
+    const resolved = termsFor(pageDir, useLocal, useMaster, pageCaseSensitive, exclude);
     const terms = Object.entries(resolved.definitions);
     if (terms.length === 0) return;
 
@@ -183,6 +212,7 @@ export function glossaryAbbr(md: MarkdownIt, options: GlossaryAbbrOptions = {}):
       if (key in envAbbreviations || pageLocalFolded.has(foldCase(key))) continue;
       envAbbreviations[key] = definition;
       if (resolved.anyCase.has(key)) anyCase.add(key);
+      entryOf.set(key, resolved.entries.get(key) as string);
     }
   });
 }

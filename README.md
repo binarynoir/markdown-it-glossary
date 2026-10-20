@@ -213,6 +213,10 @@ and any blockers.
   weight). It still shows up wherever you render the parsed entries —
   see [Building your own glossary page](#building-your-own-glossary-page).
 
+  `{.off}` at the end of the heading does the same without a qualifier:
+  `### sharp {.off}`. In a section glossary, either form turns the term
+  off for that folder and below, even if a farther glossary defines it.
+
 - **A comma-separated heading defines aliases** — other exact-text
   spellings that should tooltip with the same definition, without
   repeating it under a separate heading:
@@ -503,6 +507,51 @@ tooltip themselves.
 master, or only the section glossaries, see
 [Section glossaries](#opting-out).
 
+### Excluding single terms
+
+To keep the glossary on a page but drop a few terms, list them under
+`exclude`:
+
+```md
+---
+glossary:
+  exclude: [sharp, Homebrew]
+---
+```
+
+- Spellings are matched ignoring case, and excluding any spelling of an
+  entry drops its aliases too (`exclude: [PO]` also drops
+  `Product Owner`).
+- A farther glossary can't fill the gap: an excluded term shows no
+  tooltip at all on that page.
+- `exclude` combines with `master` and `local`. Page-local
+  `*[Term]: …` definitions are not affected.
+
+To turn a term off for a whole section or the whole site instead, use
+`{.off}` in that section's glossary or the master (see
+[Writing `glossary.md`](#writing-glossarymd)).
+
+## First mention only
+
+A term that appears 30 times on a page gets 30 tooltips. To tooltip only
+the first mention of each term on a page, turn on `firstOnly`. It
+inherits exactly like [case sensitivity](#case-sensitivity):
+
+| Where                        | Setting                     | Applies to                            |
+| ---------------------------- | --------------------------- | ------------------------------------- |
+| Plugin options               | `firstOnly: true`           | the whole site (the base default)     |
+| Master glossary frontmatter  | `glossary-first-only: true` | the whole site, overriding the option |
+| Section glossary frontmatter | `glossary-first-only: true` | that folder and every folder below it |
+| Any page's frontmatter       | `glossary-first-only: true` | that page only                        |
+
+Use `false` at any level to turn it back off below that point.
+
+- "First" means first in the page's source order, headings included.
+- A term and its aliases count as one term, and so do different casings
+  of a term matched in any case.
+- Page-local `*[Term]: …` definitions follow the setting too.
+- For explicit `scopes`, set `firstOnly` on the scope.
+
 Opting out only turns off the **glossaries** for that page. The
 page still has full [markdown-it-abbr](https://github.com/markdown-it/markdown-it-abbr)
 support, so you can add tooltips by hand there. Write a definition line
@@ -559,6 +608,7 @@ The same options object works for both `glossaryAbbr(md, options)` and
   scopes: ScopedGlossary[],    // explicit section glossaries
 
   caseSensitive: false,        // site-wide default — see "Case sensitivity"
+  firstOnly: false,            // site-wide default — see "First mention only"
 }
 ```
 
@@ -579,7 +629,7 @@ loadGlossaryFile(filePath: string, headingLevel?: number): GlossaryEntry[]
 interface GlossaryEntry {
   term: string;
   definition: string;
-  /** Defaults to `true`. `false` = parsed, but never auto-tooltipped. */
+  /** Defaults to `true`. `false` = parsed, but never auto-tooltipped (a qualifier or `{.off}`). */
   tooltip?: boolean;
   /** Other spellings that tooltip with this same definition. */
   aliases?: string[];
@@ -593,6 +643,7 @@ interface ScopedGlossary {
   entries?: GlossaryEntry[];
   site?: boolean; // apply site-wide; defaults to the file's `glossary-scope`
   caseSensitive?: boolean; // for `dir` and below; defaults to the file's `glossary-case-sensitive`
+  firstOnly?: boolean; // for `dir` and below; defaults to the file's `glossary-first-only`
 }
 ```
 

@@ -11,6 +11,8 @@ export interface GlossaryEntry {
    * `true`. Set to `false` for a term you only want documented (e.g. it's
    * ambiguous elsewhere, or it's always written as inline code and so
    * would never match in prose anyway) without it being auto-linked.
+   * In a glossary file, a parenthetical qualifier or `{.off}` at the end
+   * of the heading sets this.
    */
   tooltip?: boolean;
   /**
@@ -73,6 +75,13 @@ export interface GlossaryAbbrOptions {
    * Default: `false`.
    */
   caseSensitive?: boolean;
+  /**
+   * Tooltip only the first mention of each term on a page; later ones
+   * stay plain text. This is the site-wide default; the master glossary,
+   * a section glossary, or a single page can override it with
+   * `glossary-first-only: true | false` in its frontmatter. Default: `false`.
+   */
+  firstOnly?: boolean;
 }
 
 /**
@@ -99,4 +108,9 @@ export interface ScopedGlossary {
    * the next glossary up.
    */
   caseSensitive?: boolean;
+  /**
+   * First-mention-only tooltips for pages in `dir` and below. Defaults to
+   * the file's `glossary-first-only` frontmatter, else inherited.
+   */
+  firstOnly?: boolean;
 }

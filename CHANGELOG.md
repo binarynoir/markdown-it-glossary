@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-20
+
+### Added
+
+- `{.off}` heading flag: keeps a term in the glossary but never tooltips it, like a parenthetical qualifier without inventing one. In a section glossary it turns the term off for that folder and below
+- `glossary: { exclude: [...] }` page frontmatter drops individual terms on one page. Spellings match ignoring case, aliases are dropped with their term, and a farther glossary can't fill the gap
+- First-mention-only tooltips: the `firstOnly` option, or `glossary-first-only: true | false` in the frontmatter of the master glossary, a section glossary or any page, tooltips only the first mention of each term on a page. It inherits like case sensitivity, and a term and its aliases count as one term. `firstOnly` on explicit `scopes` too
+
 ## [0.6.0] - 2026-10-16
 
 ### Added
