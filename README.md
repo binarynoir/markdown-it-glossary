@@ -8,11 +8,11 @@ A [markdown-it](https://github.com/markdown-it/markdown-it) plugin that
 turns a term you define once into a hover tooltip everywhere it appears in
 your docs.
 
-[Documentation and live demo](https://binarynoir.tech/plugins/glossary/)
+[Documentation and live demo](https://binarynoir.com/plugins/glossary/)
 
 [![Support me on Buy Me a Coffee](https://img.shields.io/badge/Support%20me-Buy%20Me%20a%20Coffee-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/binarynoir)
 [![Support me on Ko-fi](https://img.shields.io/badge/Support%20me-Ko--fi-blue?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/binarynoir)
-[![More tools](https://img.shields.io/badge/Website-binarynoir.tech-8c8c8c?style=for-the-badge)](https://binarynoir.tech)
+[![More tools](https://img.shields.io/badge/Website-binarynoir.com-8c8c8c?style=for-the-badge)](https://binarynoir.com)
 
 ## What this does
 
@@ -717,8 +717,8 @@ Pull requests are welcome too.
 ## More from BinaryNoir
 
 <p align="center">
-  <a href="https://binarynoir.tech">
-    <img alt="BinaryNoir" src="https://binarynoir.tech/logo-horizontal.png" width="320">
+  <a href="https://binarynoir.com">
+    <img alt="BinaryNoir" src="https://binarynoir.com/logo-horizontal.png" width="320">
   </a>
 </p>
 
@@ -726,16 +726,16 @@ Glossary Tooltips is one of a family of open-source tools from BinaryNoir.
 
 **Pairs well with Glossary Tooltips**
 
-- [Markdown Tags](https://binarynoir.tech/plugins/markdown-tags/): inline status badges and tagged-pages lists
-- [Text Style](https://binarynoir.tech/plugins/text-style): colored and sized text inline
-- [HTML Escape](https://binarynoir.tech/plugins/html-escape/): stray tags and braces shown as text, not build errors
+- [Markdown Tags](https://binarynoir.com/plugins/markdown-tags/): inline status badges and tagged-pages lists
+- [Text Style](https://binarynoir.com/plugins/text-style): colored and sized text inline
+- [HTML Escape](https://binarynoir.com/plugins/html-escape/): stray tags and braces shown as text, not build errors
 
-**New:** [Blog for Vite](https://binarynoir.tech/plugins/vite-blog): a Markdown blog for a plain Vite site, with search, feeds and a strict CSP
+**New:** [Blog for Vite](https://binarynoir.com/plugins/vite-blog): a Markdown blog for a plain Vite site, with search, feeds and a strict CSP
 
-**See them all:** VitePress plugins, Vite plugins, editor extensions and command-line tools, with documentation and live demos, at **[binarynoir.tech](https://binarynoir.tech)**.
+**See them all:** VitePress plugins, Vite plugins, editor extensions and command-line tools, with documentation and live demos, at **[binarynoir.com](https://binarynoir.com)**.
 
 <!-- binarynoir:more:end -->
 
 ## Author
 
-John Smith III, [BinaryNoir](https://binarynoir.tech). Thanks to all contributors and users for their support and feedback.
+John Smith III, [BinaryNoir](https://binarynoir.com). Thanks to all contributors and users for their support and feedback.
